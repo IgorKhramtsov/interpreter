@@ -14,9 +14,9 @@ inline bool isDigit(char ch)
   return false;
 }
 
-Scanner::Scanner(const std::unique_ptr<char[]> &buffer, const std::string_view &fname)
+Scanner::Scanner(const std::unique_ptr<char[]> &buffer, const size_t count, const std::string_view &fname)
 {
-  this->content = buffer.get();
+  this->content = std::string_view(buffer.get(), count);
   this->filename = fname;
 
   this->curPos = this->curRow = this->curColl = 0;
@@ -26,7 +26,7 @@ Scanner::Scanner(const std::unique_ptr<char[]> &buffer, const std::string_view &
 
 int Scanner::next()
 {
-  this->token = nullptr;
+  this->token = "";
 
   while (true) {
     // skip stuff

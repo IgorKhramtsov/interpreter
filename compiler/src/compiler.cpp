@@ -43,7 +43,7 @@ void loadAndScan(std::string &filename)
   printf("Scanning file {}\n", filename.c_str());
 
   std::ifstream file;
-  file.open(filename.c_str(), std::ifstream::in);
+  file.open(filename.c_str(), std::ios::binary);
 
   if (!file.is_open()) {
     printf("Cant open file %s\n", filename.c_str());
@@ -56,15 +56,12 @@ void loadAndScan(std::string &filename)
   file.seekg(0, std::ios::beg);
 
   auto buffer = std::make_unique<char[]>(length + 1);
-
   file.read(buffer.get(), length);
-
   file.close();
 
   buffer.get()[length] = '\0';
 
-
-  Scanner scanner(buffer, filename); // Syntax scanner
+  Scanner scanner(buffer, length + 1, filename); // Syntax scanner
   Parser parser(&scanner); // Syntax parser
   try {
     parser.s();

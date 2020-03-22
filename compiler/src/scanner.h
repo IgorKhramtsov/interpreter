@@ -24,7 +24,7 @@ class Scanner
 
 
 public:
-  Scanner(const std::unique_ptr<char[]> &, const std::string_view &);
+  Scanner(const std::unique_ptr<char[]> &, const size_t, const std::string_view &);
   ~Scanner() = default;
 
   int peek();
