@@ -1,17 +1,21 @@
 #include "analazyer.h"
 #include <cstdio>
-
-Analyzer::Analyzer(Scanner *scanner_)
-{
-  this->scanner = scanner_;
-}
+#include <iostream>
 
 void Analyzer::printErr(const char *err)
 {
   int pos, coll, row;
-  this->scanner->getUk(pos, row, coll);
-  printf("[Analyzer] %s:%d:%d Error: %s\n", this->scanner->getFilename(), row + 1, coll, err);
+  this->m_Scanner->getUk(pos, row, coll);
+  std::cout << "[Analyzer] " << this->m_Scanner->getFilename() << ":" << row + 1 << ":" << coll << " Error " << err << '\n';
   
   throw "";
   //return types::ERROR;
+}
+
+void Analyzer::addFunction(int, const char *)
+{
+}
+
+void Analyzer::addArr(int, const char *, int, int)
+{
 }

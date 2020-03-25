@@ -2,10 +2,12 @@
 #include <vector>
 #include <string>
 #include <memory>
+#include "analazyer.h"
 
 class Scanner
 {
   static constexpr int MAXLEN = 50;
+
 
   std::string_view content;
   std::string_view token;
@@ -19,7 +21,7 @@ class Scanner
   void move(int n = 1);
   int makeToken(int, int, int);
 
-  bool isEnd() { return (content[curPos] == '\0'); };
+  bool isEnd() { return (content[curPos] == '\0'); }
   void parseToken(bool * = nullptr);
 
 

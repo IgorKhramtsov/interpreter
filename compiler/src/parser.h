@@ -4,25 +4,24 @@
 
 class Parser
 {
-	Scanner *scanner;
-	int type;
-	
-	//int pos, col, row;
-
+  Scanner *scanner;
+  Analyzer *m_Analyzer;
+  int type;
+  
 public:
-	explicit Parser(Scanner *);
-	~Parser() = default;
+  explicit Parser(Scanner *);
+  ~Parser() = default;
 
-	int errors = 0;
+  int errors = 0;
 
-	void s();
-	void funcOrVar();
-	void function();
-	void variables();
-	void codeBlock();
-	void expression();
-	void element();
+  void s();
+  void funcOrVar(int);
+  void function(int, const char* id_ );
+  void variables(int);
+  void codeBlock();
+  int expression();
+  int element();
 
-	void printErr(const char*);
+  void printErr(const char*);
 };
 

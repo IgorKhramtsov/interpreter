@@ -16,8 +16,7 @@ void loadAndScan(std::string &filename);
 
 auto main(int argc, char *argv[]) -> int
 {
-  setlocale(0, "rus");
-
+  setlocale(LC_ALL, "Russian");
   std::string filename;
 
   if (argc > 1) {
@@ -31,7 +30,7 @@ auto main(int argc, char *argv[]) -> int
   do {
     loadAndScan(filename);
     key = std::cin.get();
-    printf("%d",key);
+    std::cout << key;
   } while (key == 10 || key == 13);
 
   system("pause");
@@ -40,19 +39,19 @@ auto main(int argc, char *argv[]) -> int
 
 void loadAndScan(std::string &filename)
 {
-  printf("Scanning file {}\n", filename.c_str());
+  std::cout << "Scanning file " << filename.c_str() << '\n';
 
   std::ifstream file;
   file.open(filename.c_str(), std::ios::binary);
 
   if (!file.is_open()) {
-    printf("Cant open file %s\n", filename.c_str());
+    std::cout << "Cant open file " << filename.c_str() << '\n';
     exit(1);
   }
 
   file.seekg(0, std::ios::end);
   size_t length = file.tellg();
-  printf("File`s length: %d\n", length);
+  std::cout << "File`s length: " << length << '\n';
   file.seekg(0, std::ios::beg);
 
   auto buffer = std::make_unique<char[]>(length + 1);
@@ -66,8 +65,8 @@ void loadAndScan(std::string &filename)
   try {
     parser.s();
   } catch (...) {
-      printf("Exception has been throwed.\n");
+    std::cout << "Exception has been throwed.\n";
     return;
   }
-  printf("Everything nice ;)\n");
+  std::cout << "Everything nice ;)\n";
 }

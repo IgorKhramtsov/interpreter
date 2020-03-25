@@ -27,11 +27,11 @@
     <ClInclude Include="src\parser.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\treeNode.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\analyzer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\compiler.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -39,6 +39,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\scanner.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\treeNode.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\analyzer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

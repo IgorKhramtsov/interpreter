@@ -20,7 +20,7 @@ Scanner::Scanner(const std::unique_ptr<char[]> &buffer, const size_t count, cons
   this->filename = fname;
 
   this->curPos = this->curRow = this->curColl = 0;
-  printf("Running scanner...\n");
+  std::cout << "Running scanner...\n";
 }
 
 
@@ -50,7 +50,7 @@ int Scanner::next()
       return types::END;
     }
     if (curPos >= this->content.length()) {// no eof
-      return this->printError("ÐÐµ Ð½Ð°Ð¹Ð´ÐµÐ½ ÐºÐ¾Ð½ÐµÑ† Ñ„Ð°Ð¹Ð»Ð°");
+      return this->printError("Íå íàéäåí êîíåö ôàéëà");
     }
 
     break;
@@ -71,7 +71,7 @@ int Scanner::peek()
     } catch (const char *err) {
       return printError(err);
     }
-
+    
     if (this->token == "void") {
       return types::VOID;
     } else if (this->token == "int") {
@@ -98,7 +98,7 @@ int Scanner::peek()
     }
 
     if (!isAllDigits) {
-      return printError("ÐÐµÐ¾Ð¿Ð¾Ð·Ð½Ð°Ð½Ð°Ñ Ð»ÐµÐºÑÐµÐ¼Ð°");
+      return printError("Íåîïîçíàíàÿ ëåêñåìà");
     } else {
       return types::INT_CONST;
     }
@@ -121,7 +121,7 @@ int Scanner::peek()
     if (content[curPos + 1] == '=') {
       return makeToken(curPos, 2, types::NEQ);
     } else {
-      return makeToken(curPos, 1, printError("ÐÐµÐ¾Ð¿Ð¾Ð·Ð½Ð°Ð½Ð°Ñ Ð»ÐµÐºÑÐµÐ¼Ð°"));
+      return makeToken(curPos, 1, printError("Íåîïîçíàíàÿ ëåêñåìà"));
     }
   } else if (content[curPos] == '+') {
     if (content[curPos + 1] == '=') {
@@ -170,7 +170,7 @@ int Scanner::peek()
     return makeToken(curPos, 1, types::sRBKT);
   }
 
-  return makeToken(curPos, 1, printError("Ð½ÐµÐ¾Ð±Ñ€Ð°Ð±Ð¾Ñ‚Ð°Ð½Ð½Ñ‹Ð¹ ÑÐ»ÑƒÑ‡Ð°Ð¹"));
+  return makeToken(curPos, 1, printError("íåîáðàáîòàííûé ñëó÷àé"));
 }
 
 
@@ -209,13 +209,13 @@ void Scanner::parseToken(bool *isAllDigits)
     }
   }
   if (i >= this->MAXLEN)
-    throw("ÐŸÑ€ÐµÐ²Ñ‹ÑˆÐµÐ½Ð° Ð¼Ð°ÐºÑÐ¸Ð¼Ð°Ð»ÑŒÐ½Ð°Ñ Ð´Ð»Ð¸Ð½Ð½Ð° Ð»ÐµÐºÑÐµÐ¼Ñ‹");
+    throw("Ïðåâûøåíà ìàêñèìàëüíàÿ äëèííà ëåêñåìû");
 
   this->token = content.substr(curPos, i);
 }
 
 int Scanner::printError(const char *err)
 {
-  printf("[Scanner] %s:%d:%d Error: %s\n", this->filename, this->curRow + 1, this->curColl, err);
+  std::cout << "[Scanner] " << this->filename << ":" << this->curRow + 1 << ":" << this->curColl << " Error " << err << '\n';
   return types::ERROR;
 }

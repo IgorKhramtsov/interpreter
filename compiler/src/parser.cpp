@@ -3,14 +3,17 @@
 #include <iostream>
 #include <string>
 #include <cstdio>
-
+#include <charconv>
+#include "treeNode.h"
 
 static bool isVarType(int type) { return (type == types::INT || type == types::BOOL); }
 
 Parser::Parser(Scanner *sc)
 {
   this->scanner = sc;
-  printf("Running parser...\n");
+  this->m_Analyzer = new Analyzer(this->scanner);
+  std::cout << "Running parser...\n";
+  std::cout << "Running analyzer...\n";
 }
 
 void Parser::s()
@@ -18,88 +21,96 @@ void Parser::s()
   type = scanner->next();
 
   if (isVarType(type)) {
-    funcOrVar();
+    funcOrVar(type);
     s();
   } else if (type == types::END) {
     return;
   } else {
-    printErr((std::string("Unknown token: ") + std::string(this->scanner->getToken().data())).c_str());
+    printErr((std::string("Неизвестная лексема: ") + std::string(this->scanner->getToken().data())).c_str());
   }
 }
 
 
-void Parser::funcOrVar()
+void Parser::funcOrVar(int type_)
 {
   int pos, col, row;// NOLINT
   scanner->getUk(pos, row, col);
-  if (scanner->next() != types::ID) {
-    printErr("РћР¶РёРґР°Р»СЃСЏ РёРґРµРЅС‚РёС„РёРєР°С‚РѕСЂ");
-  }
+  if (scanner->next() != types::ID) printErr("Ожидался идентификатор");
+  const auto id = scanner->getToken().data();
+
   switch (scanner->next()) {
   case types::LBKT:
     scanner->setUk(pos, row, col);
-    function();
+    function(type_, id);
     break;
   case types::ASSIGN:
   case types::sLBKT:
   case types::SEMI:
   case types::COMA:
     scanner->setUk(pos, row, col);
-    variables();
+    variables(type_);
     break;
   default:
-    printErr("РћР¶РёРґР°Р»Р°СЃСЊ РїРµСЂРµРјРµРЅРЅР°СЏ РёР»Рё С„СѓРЅРєС†РёСЏ");
+    printErr("Ожидалась переменная или функция");
   }
 }
 
-void Parser::function()
+void Parser::function(int type_, const char *id_)
 {
-  type = scanner->next();
-  if (type != types::ID)
-    printErr("РћР¶РёРґР°Р»СЃСЏ РёРґРµРЅС‚РёС„РёРєР°С‚РѕСЂ");
-  if (scanner->next() != types::LBKT)
-    printErr("РћР¶РёРґР°Р»РѕСЃСЊ (");
-  if (scanner->next() != types::RBKT)
-    printErr("РћР¶РёРґР°Р»РѕСЃСЊ )");
+  if (scanner->next() != types::ID) printErr("Ожидался идентификатор");
+  if (scanner->next() != types::LBKT) printErr("Ожидалось (");
+  if (scanner->next() != types::RBKT) printErr("Ожидалось )");
+
+  m_Analyzer->addFunction((types)type_, id_);
   codeBlock();
 }
 
-void Parser::variables()
+void Parser::variables(int type_)
 {
-  if (scanner->next() != types::ID)
-    printErr("РћР¶РёРґР°Р»СЃСЏ РёРґРµРЅС‚РёС„РёРєР°С‚РѕСЂ");
+  if (scanner->next() != types::ID) printErr("Ожидался идентификатор");
+
+  const char *cachedToken = scanner->getToken().data();
+
   switch (scanner->next()) {
-  case types::sLBKT:
-    expression();
-    if (scanner->next() != types::sRBKT)
-      printErr("РћР¶РёРґР°Р»РѕСЃСЊ ]");
-    if (scanner->next() != types::sLBKT)
-      printErr("РћР¶РёРґР°Р»РѕСЃСЊ [");
-    expression();
-    if (scanner->next() != types::sRBKT)
-      printErr("РћР¶РёРґР°Р»РѕСЃСЊ ]");
+  case types::sLBKT: {
+
+    //expression();
+    if (scanner->next() != types::INT_CONST) printErr("Ожидалась числовая константа");
+    const int size_fdim = std::stoi(scanner->getToken().data());
+    if (scanner->next() != types::sRBKT) printErr("Ожидалось ]");
+    if (scanner->next() != types::sLBKT) printErr("Ожидалось [");
+    if (scanner->next() != types::INT_CONST) printErr("Ожидалась числовая константа");
+    const int size_sdim = std::stoi(scanner->getToken().data());
+    //expression();
+    if (scanner->next() != types::sRBKT) printErr("Ожидалось ]");
+
+    m_Analyzer->addArr((types)type_, cachedToken, size_fdim, size_sdim);
+
     switch (scanner->next()) {
     case types::COMA:
-      variables();
+      variables(type_);
       break;
     case types::SEMI:
     default:
       break;
     }
     break;
+  }
   case types::ASSIGN:
-    expression();
+    if (type_ != expression()) this->m_Analyzer->printErr("Не совпадает тип переменной и тип выражения");
     type = scanner->next();
-    if (type == types::COMA)
-      variables();
-    else if (type != types::SEMI)
-      printErr("РћР¶РёРґР°Р»РѕСЃСЊ ;");
-
+    if (type == types::COMA) {
+      variables(type_);
+    } else if (type != types::SEMI) {
+      printErr("Ожидалось ;");
+    }
     break;
   case types::SEMI:
+    this->m_Analyzer->addVar((types)type_, cachedToken);
     break;
   case types::COMA:
-    variables();
+    this->m_Analyzer->addVar((types)type_, cachedToken);
+    variables(type_);
     break;
   }
 }
@@ -107,34 +118,34 @@ void Parser::variables()
 void Parser::codeBlock()
 {
   if (scanner->next() != types::fLBKT)
-    printErr("РћР¶РёРґР°Р»РѕСЃСЊ {");
+    printErr("Ожидалось {");
+
+  this->m_Analyzer->addScope();
 
   int pos, col, row;
   scanner->getUk(pos, row, col);
   type = scanner->next();
 
   while (type == types::INT || type == types::BOOL || type == types::IF || type == types::ID || type == types::fLBKT || type == types::RETURN) {
-    if (type == types::INT || type == types::BOOL)
-      variables();
-    else if (type == types::IF) {
-      if (scanner->next() != types::LBKT)
-        printErr("РћР¶РёРґР°Р»РѕСЃСЊ (");
-      expression();
-      if (scanner->next() != types::RBKT)
-        printErr("РћР¶РёРґР°Р»РѕСЃСЊ )");
+    if (type == types::INT || type == types::BOOL) {
+      variables(type);
+    } else if (type == types::IF) {
+      if (scanner->next() != types::LBKT) printErr("Ожидалось (");
+      if (expression() != types::BOOL) this->m_Analyzer->printErr("Не удается привести к булевому типу");
+      if (scanner->next() != types::RBKT) printErr("Ожидалось )");
       codeBlock();
     } else if (type == types::ID) {
+      auto cachedId = this->scanner->getToken().data();
+
       switch (scanner->next()) {
       case types::LBKT:
-        if (scanner->next() != types::RBKT)
-          printErr("РћР¶РёРґР°Р»РѕСЃСЊ )");
-        if (scanner->next() != types::SEMI)
-          printErr("РћР¶РёРґР°Р»РѕСЃСЊ ;");
+        if (scanner->next() != types::RBKT) printErr("Ожидалось )");
+        this->m_Analyzer->getTypeOf(cachedId, IdType::tFunc);// checking for idType congruence. getType throw exception other way
+        if (scanner->next() != types::SEMI) printErr("Ожидалось ;");
         break;
       case types::ASSIGN:
-        expression();
-        if (scanner->next() != types::SEMI)
-          printErr("РћР¶РёРґР°Р»РѕСЃСЊ ;");
+        if (expression() != this->m_Analyzer->getTypeOf(cachedId, IdType::tVar)) this->m_Analyzer->printErr("Не совпадает тип переменной и выражения");
+        if (scanner->next() != types::SEMI) printErr("Ожидалось ;");
         break;
       case types::INC:
       case types::DEC:
@@ -143,21 +154,20 @@ void Parser::codeBlock()
       case types::DIVEQ:
       case types::MULEQ:
         scanner->setUk(pos, row, col);
-        expression();
-        if (scanner->next() != types::SEMI)
-          printErr("РћР¶РёРґР°Р»РѕСЃСЊ ;");
+        if (expression() != types::INT) this->m_Analyzer->printErr("Недопустимый тип выражения");
+        if (this->m_Analyzer->getTypeOf(cachedId, IdType::tVar) != types::INT) this->m_Analyzer->printErr("Недопустимый тип выражения");
+        if (scanner->next() != types::SEMI) printErr("Ожидалось ;");
         break;
       default:
-        printErr("РћР¶РёРґР°Р»СЃСЏ РІС‹Р·РѕРІ С„СѓРЅРєС†РёРё РёР»Рё РїСЂРёСЃРІР°РёРІР°РЅРёРµ");
+        printErr("Ожидался вызов функции или присваивание");
         break;
       }
     } else if (type == types::fLBKT) {
       scanner->setUk(pos, row, col);
       codeBlock();
     } else if (type == types::RETURN) {
-      expression();
-      if (scanner->next() != types::SEMI)
-        printErr("РћР¶РёРґР°Р»РѕСЃСЊ ;");
+      if (expression() != this->m_Analyzer->getTypeOfFunc()) this->m_Analyzer->printErr("Тип выражения не совпадает с типом функции");
+      if (scanner->next() != types::SEMI) printErr("Ожидалось ;");
     }
 
     scanner->getUk(pos, row, col);
@@ -165,15 +175,16 @@ void Parser::codeBlock()
   }
   scanner->setUk(pos, row, col);
 
-  if (scanner->next() != types::fRBKT)
-    printErr("РћР¶РёРґР°Р»РѕСЃСЊ }");
+  if (scanner->next() != types::fRBKT) printErr("Ожидалось }");
+  this->m_Analyzer->exitScope();
 }
 
-void Parser::expression()
+int Parser::expression()
 {
   int pos, col, row;
 
-  element();
+  auto eltype = element();
+  auto resType = eltype;
 
   scanner->getUk(pos, row, col);
   switch (scanner->next()) {
@@ -182,74 +193,92 @@ void Parser::expression()
   case types::MEQ:
   case types::LEQ:
   case types::EQ:
-    expression();
+    if (eltype != expression()) this->m_Analyzer->printErr("Разные типы выражений");
+    resType = BOOL;
     break;
 
   default:
     scanner->setUk(pos, row, col);
     break;
   }
+  return resType;
 }
 
-void Parser::element()
+int Parser::element()
 {
+  int resType;
+
+  // a = (a) | a
   int pos, col, row;
   scanner->getUk(pos, row, col);
   if (scanner->next() == types::LBKT) {
-    element();
-    if (scanner->next() != types::RBKT)
-      printErr("РћР¶РёРґР°Р»РѕСЃСЊ )");
-    else
+    resType = element();
+    if (scanner->next() != types::RBKT) {
+      printErr("Ожидалось )");
+    } else {
       goto checkOpperation;
-  } else
+    }
+  } else {
     scanner->setUk(pos, row, col);
+  }
+  // -------
 
   int type2;
   switch (scanner->next()) {
   case types::ID:
+    auto id = scanner->getToken();
+
     scanner->getUk(pos, row, col);
     type2 = scanner->next();
     if (type2 == types::sLBKT) {
-      expression();
-      if (scanner->next() != types::sRBKT)
-        printErr("РћР¶РёРґР°Р»РѕСЃСЊ ]");
-      if (scanner->next() != types::sLBKT)
-        printErr("РћР¶РёРґР°Р»РѕСЃСЊ [");
-      expression();
-      if (scanner->next() != types::sRBKT)
-        printErr("РћР¶РёРґР°Р»РѕСЃСЊ ]");
+      if (expression() != types::INT) this->m_Analyzer->printErr("Неверный тип выражения");
+      if (scanner->next() != types::sRBKT) printErr("Ожидалось ]");
+      if (scanner->next() != types::sLBKT) printErr("Ожидалось [");
+      if (expression() != types::INT) this->m_Analyzer->printErr("Неверный тип выражения");
+      if (scanner->next() != types::sRBKT) printErr("Ожидалось ]");
+      resType = this->m_Analyzer->getTypeOf(id.data(), IdType::tArr);
     } else if (type2 == types::LBKT) {
-      if (scanner->next() != types::RBKT)
-        printErr("РћР¶РёРґР°Р»РѕСЃСЊ )");
-    } else
+      if (scanner->next() != types::RBKT) printErr("Ожидалось )");
+      resType = this->m_Analyzer->getTypeOf(id.data(), IdType::tFunc);
+    } else {
+      resType = this->m_Analyzer->getTypeOf(id.data(), IdType::tVar);
       scanner->setUk(pos, row, col);
+    }
 
     break;
   case types::BOOL_CONST:
+    resType = BOOL;
+    break;
   case types::INT_CONST:
+    resType = INT;
     break;
   default:
-    printErr("РћР¶РёРґР°Р»СЃСЏ СЌР»РµРјРµРЅС‚");
-    return;
-    break;
+    printErr("Ожидался элемент");
+    return -1;
   }
 
 checkOpperation:
   scanner->getUk(pos, row, col);
   type = scanner->next();
   if (type == types::SUM || type == types::SUB || type == types::MUL || type == types::DIV || type == types::MULEQ || type == types::SUBEQ || type == types::SUMEQ || type == types::DIVEQ)
-    element();
-  else if (type == types::INC || type == types::DEC)
-    return;
-  else
-    scanner->setUk(pos, row, col);
+    if (resType != element() && resType != types::INT) {
+      this->m_Analyzer->printErr("Недопустимые типы элементов");
+    } else if (type == types::INC || type == types::DEC) {
+      if (resType != types::INT) this->m_Analyzer->printErr("Недопустимый тип элемента");
+      return resType;
+    } else {
+      scanner->setUk(pos, row, col);
+    }
+
+  return resType;
 }
 
 void Parser::printErr(const char *err)
 {
+
   int pos, coll, row;
   this->scanner->getUk(pos, row, coll);
-  printf("[Parser] %s:%d:%d Error: %s\n", this->scanner->getFilename(), row + 1, coll, err);
+  std::cout << "[Parser] " << this->scanner->getFilename() << ":" << row + 1 << ":" << coll << " Error " << err << '\n';
   errors++;
 
   throw "";

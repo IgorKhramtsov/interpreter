@@ -47,4 +47,6 @@ enum types
 
 	END=			100,	// \0
 	ERROR =			200		// err
+
+
 };

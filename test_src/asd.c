@@ -1,6 +1,7 @@
 int a = 0;
 int b = 3+3;
-bool f;
+bool f, s = TRUE, j;
+
 
 int main() { // main func
 	int asd = 0;
