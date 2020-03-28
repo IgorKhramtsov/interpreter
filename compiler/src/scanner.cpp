@@ -3,6 +3,10 @@
 #include "defs.h"
 #include <cstdio>
 
+
+#define SKIP_CR
+
+
 inline bool isLetter(char ch)
 {
   if ((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z')) return true;
@@ -31,10 +35,15 @@ int Scanner::next()
   while (true) {
     // skip stuff
     switch (content[curPos]) {
+    case '\r':// caret return (newline part)
+#ifdef SKIP_CR
+      this->move();
+      this->curColl -= 1;
+      continue;
+#endif
     case '\n':// new line
     case ' ':// space
     case '\t':// tab
-    case '\r':// caret return (newline part)
       this->move();
       continue;
     case '/':
@@ -71,7 +80,7 @@ int Scanner::peek()
     } catch (const char *err) {
       return printError(err);
     }
-    
+
     if (this->token == "void") {
       return types::VOID;
     } else if (this->token == "int") {
@@ -170,7 +179,7 @@ int Scanner::peek()
     return makeToken(curPos, 1, types::sRBKT);
   }
 
-  return makeToken(curPos, 1, printError("необработанный случай"));
+  return makeToken(curPos, 1, printError("Ќеобработанный случай"));
 }
 
 

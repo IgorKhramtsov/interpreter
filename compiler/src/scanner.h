@@ -2,7 +2,7 @@
 #include <vector>
 #include <string>
 #include <memory>
-#include "analazyer.h"
+#include "analyzer.h"
 
 class Scanner
 {

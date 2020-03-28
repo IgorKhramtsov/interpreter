@@ -151,7 +151,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="src\analazyer.h" />
+    <ClInclude Include="src\analyzer.h" />
     <ClInclude Include="src\defs.h" />
     <ClInclude Include="src\parser.h" />
     <ClInclude Include="src\scanner.h" />

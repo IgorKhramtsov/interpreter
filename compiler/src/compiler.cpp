@@ -7,7 +7,6 @@
 #include <cstdio>
 #include <thread>
 
-
 #include "scanner.h"
 #include "parser.h"
 #include "defs.h"
@@ -63,9 +62,9 @@ void loadAndScan(std::string &filename)
   Scanner scanner(buffer, length + 1, filename); // Syntax scanner
   Parser parser(&scanner); // Syntax parser
   try {
-    parser.s();
+  parser.s();
   } catch (...) {
-    std::cout << "Exception has been throwed.\n";
+    std::cout << "Exception has been thrown.\n";
     return;
   }
   std::cout << "Everything nice ;)\n";

@@ -16,7 +16,7 @@ public:
 
   void s();
   void funcOrVar(int);
-  void function(int, const char* id_ );
+  void function(int, const std::string_view &);
   void variables(int);
   void codeBlock();
   int expression();

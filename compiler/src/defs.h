@@ -1,5 +1,14 @@
 #pragma once
 
+//#define DEBUG
+
+#ifdef DEBUG
+#define LOG(msg) std::cout << "DEBUG LOG: \t" << msg << '\n'
+#else
+#define LOG
+#endif
+
+
 enum types
 {
 	VOID =			1,		// void 

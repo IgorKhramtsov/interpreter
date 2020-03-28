@@ -8,6 +8,7 @@
 
 static bool isVarType(int type) { return (type == types::INT || type == types::BOOL); }
 
+
 Parser::Parser(Scanner *sc)
 {
   this->scanner = sc;
@@ -18,6 +19,7 @@ Parser::Parser(Scanner *sc)
 
 void Parser::s()
 {
+  LOG("S");
   type = scanner->next();
 
   if (isVarType(type)) {
@@ -33,10 +35,12 @@ void Parser::s()
 
 void Parser::funcOrVar(int type_)
 {
+  LOG("funcOrVar");
+
   int pos, col, row;// NOLINT
   scanner->getUk(pos, row, col);
   if (scanner->next() != types::ID) printErr("Ожидался идентификатор");
-  const auto id = scanner->getToken().data();
+  const auto id = scanner->getToken();
 
   switch (scanner->next()) {
   case types::LBKT:
@@ -55,8 +59,10 @@ void Parser::funcOrVar(int type_)
   }
 }
 
-void Parser::function(int type_, const char *id_)
+void Parser::function(int type_, const std::string_view &id_)
 {
+  LOG("function");
+
   if (scanner->next() != types::ID) printErr("Ожидался идентификатор");
   if (scanner->next() != types::LBKT) printErr("Ожидалось (");
   if (scanner->next() != types::RBKT) printErr("Ожидалось )");
@@ -67,21 +73,20 @@ void Parser::function(int type_, const char *id_)
 
 void Parser::variables(int type_)
 {
+  LOG("variables");
+
   if (scanner->next() != types::ID) printErr("Ожидался идентификатор");
 
-  const char *cachedToken = scanner->getToken().data();
+  const auto cachedToken = scanner->getToken();
 
   switch (scanner->next()) {
   case types::sLBKT: {
-
-    //expression();
     if (scanner->next() != types::INT_CONST) printErr("Ожидалась числовая константа");
     const int size_fdim = std::stoi(scanner->getToken().data());
     if (scanner->next() != types::sRBKT) printErr("Ожидалось ]");
     if (scanner->next() != types::sLBKT) printErr("Ожидалось [");
     if (scanner->next() != types::INT_CONST) printErr("Ожидалась числовая константа");
     const int size_sdim = std::stoi(scanner->getToken().data());
-    //expression();
     if (scanner->next() != types::sRBKT) printErr("Ожидалось ]");
 
     m_Analyzer->addArr((types)type_, cachedToken, size_fdim, size_sdim);
@@ -97,6 +102,7 @@ void Parser::variables(int type_)
     break;
   }
   case types::ASSIGN:
+    this->m_Analyzer->addVar((types)type_, cachedToken);
     if (type_ != expression()) this->m_Analyzer->printErr("Не совпадает тип переменной и тип выражения");
     type = scanner->next();
     if (type == types::COMA) {
@@ -112,11 +118,15 @@ void Parser::variables(int type_)
     this->m_Analyzer->addVar((types)type_, cachedToken);
     variables(type_);
     break;
+  default:
+    this->printErr("Недопустимая лексема");
   }
 }
 
 void Parser::codeBlock()
 {
+  LOG("codeBlock");
+
   if (scanner->next() != types::fLBKT)
     printErr("Ожидалось {");
 
@@ -135,7 +145,7 @@ void Parser::codeBlock()
       if (scanner->next() != types::RBKT) printErr("Ожидалось )");
       codeBlock();
     } else if (type == types::ID) {
-      auto cachedId = this->scanner->getToken().data();
+      const auto cachedId = this->scanner->getToken();
 
       switch (scanner->next()) {
       case types::LBKT:
@@ -147,14 +157,16 @@ void Parser::codeBlock()
         if (expression() != this->m_Analyzer->getTypeOf(cachedId, IdType::tVar)) this->m_Analyzer->printErr("Не совпадает тип переменной и выражения");
         if (scanner->next() != types::SEMI) printErr("Ожидалось ;");
         break;
-      case types::INC:
-      case types::DEC:
       case types::SUMEQ:
       case types::SUBEQ:
       case types::DIVEQ:
       case types::MULEQ:
-        scanner->setUk(pos, row, col);
+        //scanner->setUk(pos, row, col);
         if (expression() != types::INT) this->m_Analyzer->printErr("Недопустимый тип выражения");
+        if (scanner->next() != types::SEMI) printErr("Ожидалось ;");
+        break;
+      case types::INC:
+      case types::DEC:
         if (this->m_Analyzer->getTypeOf(cachedId, IdType::tVar) != types::INT) this->m_Analyzer->printErr("Недопустимый тип выражения");
         if (scanner->next() != types::SEMI) printErr("Ожидалось ;");
         break;
@@ -181,6 +193,7 @@ void Parser::codeBlock()
 
 int Parser::expression()
 {
+  LOG("expression");
   int pos, col, row;
 
   auto eltype = element();
@@ -206,6 +219,7 @@ int Parser::expression()
 
 int Parser::element()
 {
+  LOG("element");
   int resType;
 
   // a = (a) | a
@@ -225,8 +239,8 @@ int Parser::element()
 
   int type2;
   switch (scanner->next()) {
-  case types::ID:
-    auto id = scanner->getToken();
+  case types::ID: {
+    const auto id = scanner->getToken();
 
     scanner->getUk(pos, row, col);
     type2 = scanner->next();
@@ -236,16 +250,17 @@ int Parser::element()
       if (scanner->next() != types::sLBKT) printErr("Ожидалось [");
       if (expression() != types::INT) this->m_Analyzer->printErr("Неверный тип выражения");
       if (scanner->next() != types::sRBKT) printErr("Ожидалось ]");
-      resType = this->m_Analyzer->getTypeOf(id.data(), IdType::tArr);
+      resType = this->m_Analyzer->getTypeOf(id, IdType::tArr);
     } else if (type2 == types::LBKT) {
       if (scanner->next() != types::RBKT) printErr("Ожидалось )");
-      resType = this->m_Analyzer->getTypeOf(id.data(), IdType::tFunc);
+      resType = this->m_Analyzer->getTypeOf(id, IdType::tFunc);
     } else {
-      resType = this->m_Analyzer->getTypeOf(id.data(), IdType::tVar);
+      resType = this->m_Analyzer->getTypeOf(id, IdType::tVar);
       scanner->setUk(pos, row, col);
     }
 
     break;
+  }
   case types::BOOL_CONST:
     resType = BOOL;
     break;
@@ -260,15 +275,17 @@ int Parser::element()
 checkOpperation:
   scanner->getUk(pos, row, col);
   type = scanner->next();
-  if (type == types::SUM || type == types::SUB || type == types::MUL || type == types::DIV || type == types::MULEQ || type == types::SUBEQ || type == types::SUMEQ || type == types::DIVEQ)
-    if (resType != element() && resType != types::INT) {
+  if (type == types::SUM || type == types::SUB || type == types::MUL || type == types::DIV || type == types::MULEQ || type == types::SUBEQ || type == types::SUMEQ || type == types::DIVEQ) {
+    if (resType != element() || resType != types::INT) {
       this->m_Analyzer->printErr("Недопустимые типы элементов");
     } else if (type == types::INC || type == types::DEC) {
       if (resType != types::INT) this->m_Analyzer->printErr("Недопустимый тип элемента");
       return resType;
-    } else {
-      scanner->setUk(pos, row, col);
     }
+  } else {
+    scanner->setUk(pos, row, col);
+  }
+
 
   return resType;
 }

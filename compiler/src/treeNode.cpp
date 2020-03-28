@@ -1,32 +1,46 @@
 #include "treeNode.h"
 
-treeNode *treeNode::addId(const char *id_, const DataType dtype_, const IdType itype_)
+std::shared_ptr<treeNode> treeNode::addId(const std::string_view &id_, const DataType dtype_, const IdType itype_, int fdimsize_, int sdimsize_)
 {
   if (this->m_LeftNode != nullptr) {
     throw "Cant add treeNode to right. leftNode already exist";
   }
 
-  this->m_LeftNode = new treeNode(this, id_, dtype_, itype_);
+  this->m_LeftNode = std::make_shared<treeNode>(this, id_, dtype_, itype_, fdimsize_, sdimsize_);
 
 
   return this->m_LeftNode;
 }
 
-treeNode *treeNode::addScope()
+std::shared_ptr<treeNode> treeNode::addScope()
 {
   if (this->m_RigthNode != nullptr) {
     throw "Cant add treeNode to right. rightNode already exist";
   }
 
-  this->m_RigthNode = new treeNode(this);
+  this->m_RigthNode = std::make_shared<treeNode>(this);
 
 
   return this->m_RigthNode;
 }
 
-treeNode *treeNode::search(const char *search_id)
+std::shared_ptr<treeNode> treeNode::exitScope()
 {
-  if (strcmp(this->m_Id.c_str(), search_id))
+  auto par = this->m_Parent;
+  while (par->m_RigthNode == nullptr) {
+    par = par->m_Parent;
+  }
+  return par;
+}
+
+std::shared_ptr<treeNode> treeNode::getParent()
+{
+  return this->m_Parent;
+}
+
+treeNode *treeNode::search(const std::string_view &search_id)
+{
+  if (this->m_Id == search_id)
     return this;
   else if (m_Parent != nullptr)
     return this->m_Parent->search(search_id);
