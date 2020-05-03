@@ -62,11 +62,12 @@ void loadAndScan(std::string &filename)
 
   Scanner scanner(buffer, length + 1, filename); // Syntax scanner
   Parser parser(&scanner); // Syntax parser
-  try {
-  parser.s();
-  } catch (...) {
-    std::cout << "Exception has been thrown.\n";
-    return;
-  }
+  //try {
+    parser.s();
+    parser.startInterp();
+  //} catch (...) {
+    //std::cout << "Exception has been thrown.\n";
+    //return;
+  //}
   std::cout << "Everything nice ;)\n";
 }

@@ -1,7 +1,16 @@
 int ad = 0;
-int b = 3 + 3;
+int b = 3; // Here`s FlagInterp is 0
 bool f, s = true, j;
 
+
+int func()
+{
+  int a, c = 10;
+  if (a > b) {
+    c = 0;
+  }
+  return c;
+}
 
 int main()
 {// main func
@@ -11,19 +20,10 @@ int main()
   {
     bool vasd = true;
   }
-  int js = 1 + b;
+  int js = 3;
   int array[2][4];
-  bool dddd12 = (asd + vasd) > 123;
-  //func();
+  bool dddd12 = (asd + asd) > 123;
+  b += func();
   asd++;
-  return 1;
-}
-
-int func()
-{
-  int a, c;
-  if (a > b) {
-    c = 0;
-  }
-  return c;
+  return asd++;
 }

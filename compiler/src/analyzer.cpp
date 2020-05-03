@@ -24,28 +24,50 @@ static constexpr types getTypeInvert(DataType retType_)
   return retType_ == DataType::tInt ? types::INT : retType_ == DataType::tBool ? types::BOOL : throw "Cant recognize type";
 }
 
-void Analyzer::addFunction(types retType_, const std::string_view &id_)
+Analyzer::Analyzer(Scanner *scanner_) : m_Scanner{ scanner_ }
+{
+  m_Root = treeNode::makeRoot();
+  m_Curr = m_Root;
+}
+
+
+void Analyzer::addFunction(types retType_, const std::string_view &id_, Uk uk)
 {
   if (this->m_Curr->search(id_) != nullptr) this->printErr("Обьект с таким именем уже обьявлен");
-  this->m_Curr = this->m_Curr->addId(id_, getType(retType_), IdType::tFunc);
+  this->m_Curr = this->m_Curr->addFunc(id_, getType(retType_), uk);
 }
 
 void Analyzer::addArr(types retType_, const std::string_view &id_, int fdimsize_, int sdimsize_)
 {
   if (this->m_Curr->search(id_) != nullptr) this->printErr("Обьект с таким именем уже обьявлен");
-  this->m_Curr = this->m_Curr->addId(id_, getType(retType_), IdType::tArr, fdimsize_, sdimsize_);
+  if (this->FlagInterp)
+    this->m_Curr = this->m_Curr->getLeft();
+  else
+    this->m_Curr = this->m_Curr->addArr(id_, getType(retType_), fdimsize_, sdimsize_);
 }
 
-void Analyzer::addVar(types retType_, const std::string_view &id_)
+void Analyzer::addVar(types retType_, const std::string_view &id_, data_variant dat)
 {
   LOG("AddVar");
   if (this->m_Curr->search(id_) != nullptr) this->printErr("Обьект с таким именем уже обьявлен");
-  this->m_Curr = this->m_Curr->addId(id_, getType(retType_), IdType::tVar);
+  //if (this->m_Curr->getLeft()->getId() == id_)
+    //this->m_Curr = this->m_Curr->getLeft();
+  //else
+    //this->m_Curr = this->m_Curr->addId(id_, getType(retType_), dat);
+  if (!this->FlagInterp || this->FirstPass) {
+    this->m_Curr = this->m_Curr->addId(id_, getType(retType_), dat);
+  } else {
+    this->m_Curr = this->m_Curr->getLeft();
+    this->m_Curr->setVal(dat);
+  }
 }
 
 void Analyzer::addScope()
 {
-  this->m_Curr = this->m_Curr->addScope();
+  if (!FirstPass)
+    this->m_Curr = this->m_Curr->getRight();
+  else
+    this->m_Curr = this->m_Curr->addScope();
 }
 
 void Analyzer::exitScope()
@@ -56,15 +78,83 @@ void Analyzer::exitScope()
 
 int Analyzer::getTypeOf(const std::string_view &id_, IdType idtype_)
 {
-  auto res = this->m_Curr->search(id_);
+  treeNode *res;
+
+  if (idtype_ == IdType::tFunc) {
+    auto m1 = this->m_Curr->search(resolve_func(types::INT, id_));
+    auto m2 = this->m_Curr->search(resolve_func(types::BOOL, id_));
+    auto m3 = this->m_Curr->search(resolve_func(types::VOID, id_));
+
+    res = m1 ? m1 : m2 ? m2 : m3;
+  } else {
+    res = this->m_Curr->search(id_);
+  }
   if (res == nullptr) printErr((std::string("Не найден обьект с именем ") + std::string(id_)).c_str());
 
   return getTypeInvert(res->getDataType());
 }
 
+// Look from root to all nodes
+std::shared_ptr<treeNode> Analyzer::findById(const std::string_view &id_, bool preserveErr)
+{
+  auto res = this->m_Root->searchDown(id_);
+  if (!preserveErr)
+    if (res == nullptr) printErr((std::string("Не найден обьект с именем ") + std::string(id_)).c_str());
+
+  return res;
+}
+
 int Analyzer::getTypeOfFunc()
 {
-  auto tmp = this->m_Curr->exitScope();
-  if (tmp == nullptr) this->printErr("Не могу выйти из области");
+  auto tmp = getFuncNode();
+
   return getTypeInvert(tmp->getDataType());
+}
+
+void Analyzer::setFuncRet(data_variant ret_val)
+{
+  auto tmp = getFuncNode();
+  tmp->setVal(ret_val);
+}
+
+std::shared_ptr<treeNode> Analyzer::getFuncNode()
+{
+  std::shared_ptr<treeNode> tmp = this->m_Curr;
+  do {
+    tmp = tmp->exitScope();
+  } while (tmp->getIdType() != IdType::tFunc);
+  if (tmp == nullptr) this->printErr("Не могу выйти из области");
+
+  return tmp;
+}
+
+void Analyzer::setVarVal(const std::string_view &id_, data_variant val_)
+{
+  auto res = this->m_Curr->search(id_);
+  if (res == nullptr) printErr((std::string("Не найден обьект с именем ") + std::string(id_)).c_str());
+  auto type = res->getDataType();
+
+  if (type == DataType::tBool) {
+    if (!std::holds_alternative<bool>(val_)) printErr("Не совпадает тип присваемого значения и тип переменной");
+  } else {
+    if (!std::holds_alternative<int>(val_)) printErr("Не совпадает тип присваемого значения и тип переменной");
+  }
+
+  if (this->FlagInterp) res->setVal(val_);
+}
+
+data_variant Analyzer::getVarVal(const std::string_view &id_)
+{
+  auto res = this->m_Curr->search(id_);
+  if (res == nullptr) printErr((std::string("Не найден обьект с именем ") + std::string(id_)).c_str());
+
+  return res->getVal();
+}
+
+data_variant Analyzer::getArrVal(const std::string_view &id_, int fdim, int sdim)
+{
+  auto res = this->m_Curr->search(id_);
+  if (res == nullptr) printErr((std::string("Не найден обьект с именем ") + std::string(id_)).c_str());
+
+  return std::get<int **>(res->getVal())[fdim][sdim];
 }

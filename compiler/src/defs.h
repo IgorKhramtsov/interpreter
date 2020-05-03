@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 //#define DEBUG
 
 #ifdef DEBUG
@@ -8,6 +10,12 @@
 #define LOG
 #endif
 
+#define data_variant std::variant<bool, int, int **>
+
+static std::string resolve_func(int t_, std::string_view n_)
+{
+  return std::to_string(t_).append(n_);
+}
 
 enum types
 {

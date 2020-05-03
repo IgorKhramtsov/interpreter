@@ -5,8 +5,13 @@
 #include "treeNode.h"
 
 #include <memory>
+#include <variant>
 
 class Scanner;
+class treeNode;
+struct Uk;
+enum struct DataType;
+enum struct IdType;
 
 class Analyzer
 {
@@ -15,22 +20,30 @@ class Analyzer
   std::shared_ptr<treeNode> m_Root;
   std::shared_ptr<treeNode> m_Curr;
 
+  
+
 
 public:
-  Analyzer(Scanner *scanner_)
-    : m_Scanner{ scanner_ }
-  {
-    m_Root = treeNode::makeRoot();
-    m_Curr = m_Root;
-  }
+  Analyzer(Scanner *);
 
-  void addFunction(types, const std::string_view &);// input arg might be deleted out of scope (const char)
+  bool FlagInterp = false;
+  bool FirstPass = true;
+
+  void addFunction(types, const std::string_view &, Uk);
   void addArr(types, const std::string_view &, int, int);
-  void addVar(types, const std::string_view &);
+  void addVar(types, const std::string_view &, data_variant = -1);
   void addScope();
   void exitScope();
+  void setCurr(std::shared_ptr<treeNode> node_) { this->m_Curr = node_; }
+  std::shared_ptr<treeNode> getCurr() { return this->m_Curr; }
+  void setVarVal(const std::string_view &, data_variant);
+  data_variant getVarVal(const std::string_view &);
+  data_variant getArrVal(const std::string_view &, int, int);
   int getTypeOf(const std::string_view &, IdType);
-  int getTypeOfFunc(); // Will go up until find func
+  std::shared_ptr<treeNode> findById(const std::string_view &, bool = false);
+  int getTypeOfFunc();// Will go up until find func
+  std::shared_ptr<treeNode> getFuncNode();
+  void setFuncRet(data_variant);
 
 
 

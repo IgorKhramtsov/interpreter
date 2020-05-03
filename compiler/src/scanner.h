@@ -4,6 +4,15 @@
 #include <memory>
 #include "analyzer.h"
 
+struct Uk
+{
+  int pos = 0;
+  int row = 0;
+  int coll = 0;
+
+  Uk(int p, int r, int c) : pos{ p }, row{ r }, coll{ c } {}
+};
+
 class Scanner
 {
   static constexpr int MAXLEN = 50;
@@ -47,5 +56,16 @@ public:
     this->curPos = pos;
     this->curRow = row;
     this->curColl = col;
+  };
+
+  Uk getUk()
+  {
+    return Uk(this->curPos, this->curRow, this->curColl);
+  };
+  void setUk(Uk uk)
+  {
+    this->curPos = uk.pos;
+    this->curRow = uk.row;
+    this->curColl = uk.coll;
   };
 };
