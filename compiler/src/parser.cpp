@@ -203,65 +203,145 @@ void Parser::codeBlock()
       setInterp(tmp);
     } else if (type == types::ID) {
       const auto cachedId = this->scanner->getToken();
+      // cachedId must be a node, so, in manipulating we can use it if it var, or arr
 
       auto typeOp = scanner->next();
-      switch (typeOp) {
-      case types::LBKT:
-        if (scanner->next() != types::RBKT) printErr("Ожидалось )");
-        //this->m_Analyzer->getTypeOf(cachedId, IdType::tFunc); // checking for idType congruence. getType throw exception other way
+      if (typeOp == types::sLBKT) {
+        auto first_expr = expression();
+        if (first_expr.type != types::INT) this->m_Analyzer->printErr("Неверный тип выражения");
+        if (scanner->next() != types::sRBKT) printErr("Ожидалось ]");
+        if (scanner->next() != types::sLBKT) printErr("Ожидалось [");
+        auto second_expr = expression();
+        if (second_expr.type != types::INT) this->m_Analyzer->printErr("Неверный тип выражения");
+        if (scanner->next() != types::sRBKT) printErr("Ожидалось ]");
+        auto arrType = this->m_Analyzer->getTypeOf(cachedId, IdType::tArr);
+        typeOp = scanner->next();
 
-        callFunc(cachedId);
-        if (scanner->next() != types::SEMI) printErr("Ожидалось ;");
-        break;
-      case types::ASSIGN: {
+        switch (typeOp) {
+        case types::ASSIGN: {
 
-        auto exp_dat = expression();
-        if (FlagInterp) {
-          this->m_Analyzer->setVarVal(cachedId, exp_dat.payload);
-        } else {
-          if (exp_dat.type != this->m_Analyzer->getTypeOf(cachedId, IdType::tVar)) this->m_Analyzer->printErr("Не совпадает тип переменной и выражения");
+          auto exp_dat = expression();
+          if (FlagInterp) {
+            this->m_Analyzer->setArrVal(cachedId,
+              std::get<int>(first_expr.payload),
+              std::get<int>(second_expr.payload),
+              exp_dat.payload);
+          } else {
+            if (exp_dat.type != this->m_Analyzer->getTypeOf(cachedId, IdType::tVar)) this->m_Analyzer->printErr("Не совпадает тип переменной и выражения");
+          }
+
+          if (scanner->next() != types::SEMI) printErr("Ожидалось ;");
+          break;
+        }
+        case types::SUMEQ:
+        case types::SUBEQ:
+        case types::DIVEQ:
+        case types::MULEQ: {
+          auto exp_dat = expression();
+          if (exp_dat.type != types::INT) this->m_Analyzer->printErr("Недопустимый тип выражения");
+
+          if (this->FlagInterp) {
+            int curVal = std::get<int>(this->m_Analyzer->getArrVal(cachedId,
+              std::get<int>(first_expr.payload),
+              std::get<int>(second_expr.payload)));
+            int expVal = std::get<int>(exp_dat.payload);
+            if (typeOp == types::SUMEQ) curVal += expVal;
+            if (typeOp == types::SUBEQ) curVal -= expVal;
+            if (typeOp == types::DIVEQ) curVal /= expVal;
+            if (typeOp == types::MULEQ) curVal *= expVal;
+            this->m_Analyzer->setArrVal(cachedId,
+              std::get<int>(first_expr.payload),
+              std::get<int>(second_expr.payload),
+              curVal);
+          }
+
+          if (scanner->next() != types::SEMI) printErr("Ожидалось ;");
+          break;
+        }
+        case types::INC:
+        case types::DEC: {
+
+          if (FlagInterp) {
+            auto value = std::get<int>(this->m_Analyzer->getArrVal(cachedId,
+              std::get<int>(first_expr.payload),
+              std::get<int>(second_expr.payload)));
+            if (typeOp == types::INC) this->m_Analyzer->setArrVal(cachedId,
+              std::get<int>(first_expr.payload),
+              std::get<int>(second_expr.payload),
+              value + 1);
+            if (typeOp == types::DEC) this->m_Analyzer->setArrVal(cachedId,
+              std::get<int>(first_expr.payload),
+              std::get<int>(second_expr.payload),
+              value - 1);
+          } else {
+            if (this->m_Analyzer->getTypeOf(cachedId, IdType::tVar) != types::INT) this->m_Analyzer->printErr("Недопустимый тип выражения");
+          }
+
+          if (scanner->next() != types::SEMI) printErr("Ожидалось ;");
+          break;
+        }
+        default:
+          printErr("Ожидалось присваивание");
+          break;
         }
 
-        if (scanner->next() != types::SEMI) printErr("Ожидалось ;");
-        break;
-      }
-      case types::SUMEQ:
-      case types::SUBEQ:
-      case types::DIVEQ:
-      case types::MULEQ: {
-        auto exp_dat = expression();
-        if (exp_dat.type != types::INT) this->m_Analyzer->printErr("Недопустимый тип выражения");
+      } else {
+        switch (typeOp) {
+        case types::LBKT:
+          if (scanner->next() != types::RBKT) printErr("Ожидалось )");
+          callFunc(cachedId);
+          if (scanner->next() != types::SEMI) printErr("Ожидалось ;");
+          break;
+        case types::ASSIGN: {
 
-        if (this->FlagInterp) {
-          int curVal = std::get<int>(this->m_Analyzer->getVarVal(cachedId));
-          int expVal = std::get<int>(exp_dat.payload);
-          if (typeOp == types::SUMEQ) curVal += expVal;
-          if (typeOp == types::SUBEQ) curVal -= expVal;
-          if (typeOp == types::DIVEQ) curVal /= expVal;
-          if (typeOp == types::MULEQ) curVal *= expVal;
-          this->m_Analyzer->setVarVal(cachedId, curVal);
+          auto exp_dat = expression();
+          if (FlagInterp) {
+            this->m_Analyzer->setVarVal(cachedId, exp_dat.payload);
+          } else {
+            if (exp_dat.type != this->m_Analyzer->getTypeOf(cachedId, IdType::tVar)) this->m_Analyzer->printErr("Не совпадает тип переменной и выражения");
+          }
+
+          if (scanner->next() != types::SEMI) printErr("Ожидалось ;");
+          break;
         }
+        case types::SUMEQ:
+        case types::SUBEQ:
+        case types::DIVEQ:
+        case types::MULEQ: {
+          auto exp_dat = expression();
+          if (exp_dat.type != types::INT) this->m_Analyzer->printErr("Недопустимый тип выражения");
 
-        if (scanner->next() != types::SEMI) printErr("Ожидалось ;");
-        break;
-      }
-      case types::INC:
-      case types::DEC: {
+          if (this->FlagInterp) {
+            int curVal = std::get<int>(this->m_Analyzer->getVarVal(cachedId));
+            int expVal = std::get<int>(exp_dat.payload);
+            if (typeOp == types::SUMEQ) curVal += expVal;
+            if (typeOp == types::SUBEQ) curVal -= expVal;
+            if (typeOp == types::DIVEQ) curVal /= expVal;
+            if (typeOp == types::MULEQ) curVal *= expVal;
+            this->m_Analyzer->setVarVal(cachedId, curVal);
+          }
 
-        if (FlagInterp) {
-          auto value = std::get<int>(this->m_Analyzer->getVarVal(cachedId));
-          if (typeOp == types::INC) this->m_Analyzer->setVarVal(cachedId, value + 1);
-          if (typeOp == types::DEC) this->m_Analyzer->setVarVal(cachedId, value - 1);
-        } else {
-          if (this->m_Analyzer->getTypeOf(cachedId, IdType::tVar) != types::INT) this->m_Analyzer->printErr("Недопустимый тип выражения");
+          if (scanner->next() != types::SEMI) printErr("Ожидалось ;");
+          break;
         }
+        case types::INC:
+        case types::DEC: {
 
-        if (scanner->next() != types::SEMI) printErr("Ожидалось ;");
-        break;
-      }
-      default:
-        printErr("Ожидался вызов функции или присваивание");
-        break;
+          if (FlagInterp) {
+            auto value = std::get<int>(this->m_Analyzer->getVarVal(cachedId));
+            if (typeOp == types::INC) this->m_Analyzer->setVarVal(cachedId, value + 1);
+            if (typeOp == types::DEC) this->m_Analyzer->setVarVal(cachedId, value - 1);
+          } else {
+            if (this->m_Analyzer->getTypeOf(cachedId, IdType::tVar) != types::INT) this->m_Analyzer->printErr("Недопустимый тип выражения");
+          }
+
+          if (scanner->next() != types::SEMI) printErr("Ожидалось ;");
+          break;
+        }
+        default:
+          printErr("Ожидался вызов функции или присваивание");
+          break;
+        }
       }
     } else if (type == types::fLBKT) {
       scanner->setUk(pos, row, col);
@@ -427,8 +507,7 @@ checkOpperation:
         resVal = leftVal / rightVal;
         break;
       }
-      if (!left_name.empty() && 
-        (type == types::SUMEQ || type == types::SUBEQ || type == types::MULEQ || type == types::DIVEQ)) {
+      if (!left_name.empty() && (type == types::SUMEQ || type == types::SUBEQ || type == types::MULEQ || type == types::DIVEQ)) {
         switch (type) {
         case types::SUMEQ:
           leftVal = leftVal + rightVal;

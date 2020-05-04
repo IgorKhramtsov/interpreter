@@ -153,6 +153,7 @@
   <ItemGroup>
     <ClInclude Include="src\analyzer.h" />
     <ClInclude Include="src\defs.h" />
+    <ClInclude Include="src\FileWatcher.h" />
     <ClInclude Include="src\parser.h" />
     <ClInclude Include="src\scanner.h" />
     <ClInclude Include="src\treeNode.h" />

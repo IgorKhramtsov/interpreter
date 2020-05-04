@@ -8,6 +8,17 @@ std::shared_ptr<treeNode> treeNode::addArr(const std::string_view &id_, const Da
   }
 
   this->m_LeftNode = std::make_shared<treeNode>(this, id_, dtype_, IdType::tArr, fdimsize_, sdimsize_);
+  if (dtype_ == DataType::tInt) {
+    int **arr = new int *[fdimsize_];
+    for (int i = 0; i < fdimsize_; i++)
+      arr[i] = new int[sdimsize_];
+    this->m_LeftNode->value = arr;
+  } else {
+    bool **arr = new bool *[fdimsize_];
+    for (int i = 0; i < fdimsize_; i++)
+      arr[i] = new bool[sdimsize_];
+    this->m_LeftNode->value = arr;
+  }
 
 
   return this->m_LeftNode;

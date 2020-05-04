@@ -11,6 +11,7 @@
 #include "scanner.h"
 #include "parser.h"
 #include "defs.h"
+#include "FileWatcher.h"
 
 void loadAndScan(std::string &filename);
 
@@ -27,11 +28,14 @@ auto main(int argc, char *argv[]) -> int
   }
 
   int key;
-  do {
-    loadAndScan(filename);
-    key = std::cin.get();
-    std::cout << key;
-  } while (key == 10 || key == 13);
+  //do {
+    //loadAndScan(filename);
+    //key = std::cin.get();
+    //std::cout << key;
+  //} while (key == 10 || key == 13);
+  loadAndScan(filename);
+  FileWatcher watcher(filename, 350);
+  watcher.start([&filename]() -> void { loadAndScan(filename); } );
 
   system("pause");
   return 0;
@@ -62,12 +66,12 @@ void loadAndScan(std::string &filename)
 
   Scanner scanner(buffer, length + 1, filename); // Syntax scanner
   Parser parser(&scanner); // Syntax parser
-  //try {
+  try {
     parser.s();
     parser.startInterp();
-  //} catch (...) {
-    //std::cout << "Exception has been thrown.\n";
-    //return;
-  //}
+  } catch (...) {
+    std::cout << "Exception has been thrown.\n";
+    return;
+  }
   std::cout << "Everything nice ;)\n";
 }

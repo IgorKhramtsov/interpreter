@@ -1,11 +1,11 @@
-int ad = 0;
-int b = 3; // Here`s FlagInterp is 0
+int ad;
+int b = 3;
 bool f, s = true, j;
 
 
 int func()
 {
-  int a, c = 10;
+  int a = 100, c = 10;
   if (a > b) {
     c = 0;
   }
@@ -22,8 +22,9 @@ int main()
   }
   int js = 3;
   int array[2][4];
+  array[1][1] = 2;
   bool dddd12 = (asd + asd) > 123;
   b += func();
-  asd++;
-  return asd++;
+  asd+=2;
+  return array[1][1] + func();
 }

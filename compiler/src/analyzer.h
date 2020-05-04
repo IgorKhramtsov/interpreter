@@ -39,6 +39,7 @@ public:
   void setVarVal(const std::string_view &, data_variant);
   data_variant getVarVal(const std::string_view &);
   data_variant getArrVal(const std::string_view &, int, int);
+  void setArrVal(const std::string_view &, int, int, data_variant);
   int getTypeOf(const std::string_view &, IdType);
   std::shared_ptr<treeNode> findById(const std::string_view &, bool = false);
   int getTypeOfFunc();// Will go up until find func

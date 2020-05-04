@@ -158,3 +158,14 @@ data_variant Analyzer::getArrVal(const std::string_view &id_, int fdim, int sdim
 
   return std::get<int **>(res->getVal())[fdim][sdim];
 }
+
+void Analyzer::setArrVal(const std::string_view &id_, int fdim, int sdim, data_variant dat)
+{
+  auto res = this->m_Curr->search(id_);
+  if (res == nullptr) printErr((std::string("Не найден обьект с именем ") + std::string(id_)).c_str());
+
+  if (res->getDataType() == DataType::tInt)
+    std::get<int **>(res->getVal())[fdim][sdim] = std::get<int>(dat);
+  else
+    std::get<int **>(res->getVal())[fdim][sdim] = std::get<bool>(dat);
+}
