@@ -6,6 +6,7 @@
 
 #include <memory>
 #include <variant>
+#include <map>
 
 class Scanner;
 class treeNode;
@@ -29,7 +30,7 @@ public:
   bool FlagInterp = false;
   bool FirstPass = true;
 
-  void addFunction(types, const std::string_view &, Uk);
+  void addFunction(types, const std::string_view &, Uk, std::map<std::string, int>);
   void addArr(types, const std::string_view &, int, int);
   void addVar(types, const std::string_view &, data_variant = -1);
   void addScope();
@@ -47,6 +48,6 @@ public:
   void setFuncRet(data_variant);
 
 
-
+  void show();
   void printErr(const char *);
 };

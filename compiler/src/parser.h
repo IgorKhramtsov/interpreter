@@ -3,6 +3,7 @@
 #include "scanner.h"
 #include <stack>
 #include <map>
+#include <vector>
 
 
 struct Data
@@ -33,12 +34,15 @@ public:
 
   void s();
   void startInterp();
-  data_variant callFunc(std::shared_ptr<treeNode>);
-  data_variant callFunc(const std::string_view &);
+  void show();
+  data_variant callFunc(std::shared_ptr<treeNode>, std::vector<data_variant>);
+  data_variant callFunc(const std::string_view &, std::vector<data_variant> = {});
   void funcOrVar(int);
   void function(int, const std::string_view &);
+  std::map<std::string, int> params();
+  std::vector<data_variant> arguments();
   void variables(int);
-  void codeBlock();
+  void codeBlock(std::shared_ptr<treeNode> node_ = nullptr, std::vector<data_variant> args_ = {});
   Data expression();
   Data element();
 

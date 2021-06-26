@@ -15,6 +15,10 @@ void Analyzer::printErr(const char *err)
   //return types::ERROR;
 }
 
+void Analyzer::show() {
+  this->m_Root->print();
+}
+
 static constexpr DataType getType(types retType_)
 {
   return retType_ == types::INT ? DataType::tInt : retType_ == types::BOOL ? DataType::tBool : throw "Cant recognize type";
@@ -31,15 +35,15 @@ Analyzer::Analyzer(Scanner *scanner_) : m_Scanner{ scanner_ }
 }
 
 
-void Analyzer::addFunction(types retType_, const std::string_view &id_, Uk uk)
+void Analyzer::addFunction(types retType_, const std::string_view &id_, Uk uk, std::map<std::string, int> args_)
 {
-  if (this->m_Curr->search(id_) != nullptr) this->printErr("Обьект с таким именем уже обьявлен");
-  this->m_Curr = this->m_Curr->addFunc(id_, getType(retType_), uk);
+  if (this->m_Curr->search(id_) != nullptr) this->printErr("Object with same name already defined");
+  this->m_Curr = this->m_Curr->addFunc(id_, getType(retType_), uk, args_);
 }
 
 void Analyzer::addArr(types retType_, const std::string_view &id_, int fdimsize_, int sdimsize_)
 {
-  if (this->m_Curr->search(id_) != nullptr) this->printErr("Обьект с таким именем уже обьявлен");
+  if (this->m_Curr->search(id_) != nullptr) this->printErr("Object with same name already defined");
   if (this->FlagInterp)
     this->m_Curr = this->m_Curr->getLeft();
   else
@@ -49,7 +53,7 @@ void Analyzer::addArr(types retType_, const std::string_view &id_, int fdimsize_
 void Analyzer::addVar(types retType_, const std::string_view &id_, data_variant dat)
 {
   LOG("AddVar");
-  if (this->m_Curr->search(id_) != nullptr) this->printErr("Обьект с таким именем уже обьявлен");
+  if (this->m_Curr->search(id_) != nullptr) this->printErr("Object with same name already defined");
   //if (this->m_Curr->getLeft()->getId() == id_)
     //this->m_Curr = this->m_Curr->getLeft();
   //else
@@ -73,7 +77,7 @@ void Analyzer::addScope()
 void Analyzer::exitScope()
 {
   this->m_Curr = this->m_Curr->exitScope();
-  if (this->m_Curr == nullptr) this->printErr("Не могу выйти из области");
+  if (this->m_Curr == nullptr) this->printErr("Cant get out of scope");
 }
 
 int Analyzer::getTypeOf(const std::string_view &id_, IdType idtype_)
@@ -89,7 +93,7 @@ int Analyzer::getTypeOf(const std::string_view &id_, IdType idtype_)
   } else {
     res = this->m_Curr->search(id_);
   }
-  if (res == nullptr) printErr((std::string("Не найден обьект с именем ") + std::string(id_)).c_str());
+  if (res == nullptr) printErr((std::string("Cant find object with name ") + std::string(id_)).c_str());
 
   return getTypeInvert(res->getDataType());
 }
@@ -99,7 +103,7 @@ std::shared_ptr<treeNode> Analyzer::findById(const std::string_view &id_, bool p
 {
   auto res = this->m_Root->searchDown(id_);
   if (!preserveErr)
-    if (res == nullptr) printErr((std::string("Не найден обьект с именем ") + std::string(id_)).c_str());
+    if (res == nullptr) printErr((std::string("Cant find object with name ") + std::string(id_)).c_str());
 
   return res;
 }
@@ -123,7 +127,7 @@ std::shared_ptr<treeNode> Analyzer::getFuncNode()
   do {
     tmp = tmp->exitScope();
   } while (tmp->getIdType() != IdType::tFunc);
-  if (tmp == nullptr) this->printErr("Не могу выйти из области");
+  if (tmp == nullptr) this->printErr("Cant get out of scope");
 
   return tmp;
 }
@@ -131,13 +135,13 @@ std::shared_ptr<treeNode> Analyzer::getFuncNode()
 void Analyzer::setVarVal(const std::string_view &id_, data_variant val_)
 {
   auto res = this->m_Curr->search(id_);
-  if (res == nullptr) printErr((std::string("Не найден обьект с именем ") + std::string(id_)).c_str());
+  if (res == nullptr) printErr((std::string("Cant find object with name ") + std::string(id_)).c_str());
   auto type = res->getDataType();
 
   if (type == DataType::tBool) {
-    if (!std::holds_alternative<bool>(val_)) printErr("Не совпадает тип присваемого значения и тип переменной");
+    if (!std::holds_alternative<bool>(val_)) printErr("Assigned value is not subtype of var");
   } else {
-    if (!std::holds_alternative<int>(val_)) printErr("Не совпадает тип присваемого значения и тип переменной");
+    if (!std::holds_alternative<int>(val_)) printErr("Assigned value is not subtype of var");
   }
 
   if (this->FlagInterp) res->setVal(val_);
@@ -146,7 +150,7 @@ void Analyzer::setVarVal(const std::string_view &id_, data_variant val_)
 data_variant Analyzer::getVarVal(const std::string_view &id_)
 {
   auto res = this->m_Curr->search(id_);
-  if (res == nullptr) printErr((std::string("Не найден обьект с именем ") + std::string(id_)).c_str());
+  if (res == nullptr) printErr((std::string("Cant find object with name ") + std::string(id_)).c_str());
 
   return res->getVal();
 }
@@ -154,7 +158,7 @@ data_variant Analyzer::getVarVal(const std::string_view &id_)
 data_variant Analyzer::getArrVal(const std::string_view &id_, int fdim, int sdim)
 {
   auto res = this->m_Curr->search(id_);
-  if (res == nullptr) printErr((std::string("Не найден обьект с именем ") + std::string(id_)).c_str());
+  if (res == nullptr) printErr((std::string("Cant find object with name ") + std::string(id_)).c_str());
 
   return std::get<int **>(res->getVal())[fdim][sdim];
 }
@@ -162,7 +166,7 @@ data_variant Analyzer::getArrVal(const std::string_view &id_, int fdim, int sdim
 void Analyzer::setArrVal(const std::string_view &id_, int fdim, int sdim, data_variant dat)
 {
   auto res = this->m_Curr->search(id_);
-  if (res == nullptr) printErr((std::string("Не найден обьект с именем ") + std::string(id_)).c_str());
+  if (res == nullptr) printErr((std::string("Cant find object with name ") + std::string(id_)).c_str());
 
   if (res->getDataType() == DataType::tInt)
     std::get<int **>(res->getVal())[fdim][sdim] = std::get<int>(dat);

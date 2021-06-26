@@ -59,7 +59,7 @@ int Scanner::next()
       return types::END;
     }
     if (curPos >= this->content.length()) {// no eof
-      return this->printError("Не найден конец файла");
+      return this->printError("Cant find end of file");
     }
 
     break;
@@ -107,7 +107,7 @@ int Scanner::peek()
     }
 
     if (!isAllDigits) {
-      return printError("Неопознаная лексема");
+      return printError("Unrecognized token");
     } else {
       return types::INT_CONST;
     }
@@ -130,7 +130,7 @@ int Scanner::peek()
     if (content[curPos + 1] == '=') {
       return makeToken(curPos, 2, types::NEQ);
     } else {
-      return makeToken(curPos, 1, printError("Неопознаная лексема"));
+      return makeToken(curPos, 1, printError("Unrecognized token"));
     }
   } else if (content[curPos] == '+') {
     if (content[curPos + 1] == '=') {
@@ -179,7 +179,7 @@ int Scanner::peek()
     return makeToken(curPos, 1, types::sRBKT);
   }
 
-  return makeToken(curPos, 1, printError("Необработанный случай"));
+  return makeToken(curPos, 1, printError("Unsopported case"));
 }
 
 
@@ -218,7 +218,7 @@ void Scanner::parseToken(bool *isAllDigits)
     }
   }
   if (i >= this->MAXLEN)
-    throw("Превышена максимальная длинна лексемы");
+    throw("Exceeded max token length");
 
   this->token = content.substr(curPos, i);
 }

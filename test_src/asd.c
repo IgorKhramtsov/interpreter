@@ -1,30 +1,25 @@
-int ad;
-int b = 3;
 bool f, s = true, j;
-
 
 int func()
 {
-  int a = 100, c = 10;
-  if (a > b) {
-    c = 0;
-  }
-  return c;
+	int a = 100, c = 10;
+	if (a > c) {
+		c = 0;
+	}
+	return c;
+}
+
+int func(bool a, int cd)
+{
+	return cd;
+}
+
+int func(bool a) {
+	return 99;
 }
 
 int main()
-{// main func
-  int asd = 0;
-  /* some stuff 
-	here */
-  {
-    bool vasd = true;
-  }
-  int js = 3;
-  int array[2][4];
-  array[1][1] = 2;
-  bool dddd12 = (asd + asd) > 123;
-  b += func();
-  asd+=2;
-  return array[1][1] + func();
+{
+	int js = 3;
+	return func(true, 42);
 }

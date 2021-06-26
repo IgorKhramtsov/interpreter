@@ -15,9 +15,10 @@
 
 void loadAndScan(std::string &filename);
 
+#define disable_catch 0
+
 auto main(int argc, char *argv[]) -> int
 {
-  setlocale(LC_ALL, "Russian");
   std::string filename;
 
   if (argc > 1) {
@@ -29,13 +30,16 @@ auto main(int argc, char *argv[]) -> int
 
   int key;
   //do {
-    //loadAndScan(filename);
-    //key = std::cin.get();
-    //std::cout << key;
+  //loadAndScan(filename);
+  //key = std::cin.get();
+  //std::cout << key;
   //} while (key == 10 || key == 13);
   loadAndScan(filename);
   FileWatcher watcher(filename, 350);
-  watcher.start([&filename]() -> void { loadAndScan(filename); } );
+  watcher.start([&filename]() -> void { 
+    system("CLS");
+    loadAndScan(filename); 
+  });
 
   system("pause");
   return 0;
@@ -64,14 +68,22 @@ void loadAndScan(std::string &filename)
 
   buffer.get()[length] = '\0';
 
-  Scanner scanner(buffer, length + 1, filename); // Syntax scanner
-  Parser parser(&scanner); // Syntax parser
+  Scanner scanner(buffer, length + 1, filename);// Syntax scanner
+  Parser parser(&scanner);// Syntax parser
+
+#if disable_catch
+  parser.s();
+  parser.startInterp();
+  parser.show();
+#else
   try {
     parser.s();
     parser.startInterp();
+    parser.show();
   } catch (...) {
     std::cout << "Exception has been thrown.\n";
     return;
   }
+#endif
   std::cout << "Everything nice ;)\n";
 }

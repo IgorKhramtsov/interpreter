@@ -31,7 +31,7 @@ void Parser::s()
   } else if (type == types::END) {
     return;
   } else {
-    printErr((std::string("Неизвестная лексема: ") + std::string(this->scanner->getToken().data())).c_str());
+    printErr((std::string("Unrecognized token: ") + std::string(this->scanner->getToken().data())).c_str());
   }
 }
 
@@ -40,23 +40,28 @@ void Parser::startInterp()
   setInterp(true);
   setFirstPass(false);
   auto ret = callFunc("main");
-  std::cout << "Program exited with code " << std::get<int>(ret) << '\n';
+  std::cout << "Program exit with code " << std::get<int>(ret) << '\n';
 }
 
-data_variant Parser::callFunc(const std::string_view &name)
+void Parser::show() {
+  std::cout << '\n' << "========Semantic tree========" << '\n';
+  this->m_Analyzer->show();
+}
+
+data_variant Parser::callFunc(const std::string_view &name, std::vector<data_variant> args)
 {
-  auto m1 = m_Analyzer->findById(resolve_func(types::INT, name), true);
-  auto m2 = m_Analyzer->findById(resolve_func(types::BOOL, name), true);
-  auto m3 = m_Analyzer->findById(resolve_func(types::VOID, name), true);
+  auto m1 = m_Analyzer->findById(resolve_func(types::INT, name, args), true);
+  auto m2 = m_Analyzer->findById(resolve_func(types::BOOL, name, args), true);
+  auto m3 = m_Analyzer->findById(resolve_func(types::VOID, name, args), true);
   auto node = m1 ? m1 : m2 ? m2 : m3;
 
   if (node == nullptr) {
     this->m_Analyzer->printErr(std::string("Could not find method with name ").append(name).c_str());
   }
-  return callFunc(node);
+  return callFunc(node, args);
 }
 
-data_variant Parser::callFunc(std::shared_ptr<treeNode> node)
+data_variant Parser::callFunc(std::shared_ptr<treeNode> node, std::vector<data_variant> args)
 {
   if (this->FlagInterp) {
 
@@ -64,7 +69,7 @@ data_variant Parser::callFunc(std::shared_ptr<treeNode> node)
     auto tmp = this->m_Analyzer->getCurr();
     this->m_Analyzer->setCurr(node);
     this->scanner->setUk(*node->getUk());
-    this->codeBlock();
+    this->codeBlock(node, args);
     this->m_Analyzer->setCurr(tmp);
     this->scanner->setUk(this->callStack.top());
     this->callStack.pop();
@@ -81,7 +86,7 @@ void Parser::funcOrVar(int type_)
 
   int pos, col, row;// NOLINT
   scanner->getUk(pos, row, col);
-  if (scanner->next() != types::ID) printErr("Ожидался идентификатор");
+  if (scanner->next() != types::ID) printErr("Identifier expected");
   const auto id = scanner->getToken();
 
   switch (scanner->next()) {
@@ -97,7 +102,7 @@ void Parser::funcOrVar(int type_)
     variables(type_);
     break;
   default:
-    printErr("Ожидалась переменная или функция");
+    printErr("Variable or function expected");
   }
 }
 
@@ -105,36 +110,97 @@ void Parser::function(int type_, const std::string_view &id_)
 {
   LOG("function");
 
-  if (scanner->next() != types::ID) printErr("Ожидался идентификатор");
-  if (scanner->next() != types::LBKT) printErr("Ожидалось (");
-  // args
-  if (scanner->next() != types::RBKT) printErr("Ожидалось )");
+  if (scanner->next() != types::ID) printErr("Identifier expected");
+  if (scanner->next() != types::LBKT) printErr("Expect (");
+  auto arg_map = params();
+  if (scanner->next() != types::RBKT) printErr("Expect )");
 
-  m_Analyzer->addFunction((types)type_, resolve_func(type_, id_ /*args*/), this->scanner->getUk());
+  m_Analyzer->addFunction((types)type_, resolve_func(type_, id_, arg_map), this->scanner->getUk(), arg_map);
 
   auto tmp = this->FlagInterp;
   setInterp(false);
-  codeBlock();
+  codeBlock(this->m_Analyzer->getCurr());
   setInterp(tmp);
+}
+
+std::map<std::string, int> Parser::params()
+{
+  auto map = std::map<std::string, int>();
+
+  int next_type;
+  do {
+    auto saved_uk = this->scanner->getUk();
+    next_type = this->scanner->next();
+    if (next_type == types::INT || next_type == types::BOOL) {
+      if (this->scanner->next() != types::ID) printErr("Argument name expected");
+      if (map.find(this->scanner->getToken().data()) != map.end()) printErr("Argument with the same name already exist");
+      map.insert( std::pair(std::string(this->scanner->getToken()), next_type) );
+      if (this->scanner->peek() == types::COMA) {
+        this->scanner->next();
+        continue;
+      } else {
+        break;
+      }
+
+    } else if (next_type == types::RBKT) {
+      this->scanner->setUk(saved_uk);
+      break;
+    } else {
+      this->printErr("Unexpected symbol");
+    }
+  } while (true);
+
+  return map;
+}
+
+std::vector<data_variant> Parser::arguments()
+{
+  auto list = std::vector<data_variant>();
+
+  int next_type;
+  do {
+    auto saved_uk = this->scanner->getUk();
+    next_type = this->scanner->next();
+    if (next_type != types::RBKT) {
+      this->scanner->setUk(saved_uk);
+      auto exp_dat = expression();
+      list.push_back(exp_dat.payload);
+
+      if (this->scanner->peek() == types::COMA) {
+        this->scanner->next();
+        continue;
+      } else {
+        break;
+      }
+
+    } else if (next_type == types::RBKT) {
+      this->scanner->setUk(saved_uk);
+      break;
+    } else {
+      this->printErr("Unexpected symbol");
+    }
+  } while (true);
+
+  return list;
 }
 
 void Parser::variables(int type_)
 {
   LOG("variables");
 
-  if (scanner->next() != types::ID) printErr("Ожидался идентификатор");
+  if (scanner->next() != types::ID) printErr("Identifier expected");
 
   const auto cachedToken = scanner->getToken();
 
   switch (scanner->next()) {
   case types::sLBKT: {
-    if (scanner->next() != types::INT_CONST) printErr("Ожидалась числовая константа");
+    if (scanner->next() != types::INT_CONST) printErr("Numeric const expected");
     const int size_fdim = std::stoi(scanner->getToken().data());
-    if (scanner->next() != types::sRBKT) printErr("Ожидалось ]");
-    if (scanner->next() != types::sLBKT) printErr("Ожидалось [");
-    if (scanner->next() != types::INT_CONST) printErr("Ожидалась числовая константа");
+    if (scanner->next() != types::sRBKT) printErr("Expected ]");
+    if (scanner->next() != types::sLBKT) printErr("Expected [");
+    if (scanner->next() != types::INT_CONST) printErr("Numeric const expected");
     const int size_sdim = std::stoi(scanner->getToken().data());
-    if (scanner->next() != types::sRBKT) printErr("Ожидалось ]");
+    if (scanner->next() != types::sRBKT) printErr("Expected ]");
 
     m_Analyzer->addArr((types)type_, cachedToken, size_fdim, size_sdim);
 
@@ -151,14 +217,14 @@ void Parser::variables(int type_)
   case types::ASSIGN: {
 
     auto exp_dat = expression();
-    if (type_ != exp_dat.type) this->m_Analyzer->printErr("Не совпадает тип переменной и тип выражения");
+    if (type_ != exp_dat.type) this->m_Analyzer->printErr("Variable is not subtype of expression result");
     this->m_Analyzer->addVar((types)type_, cachedToken, exp_dat.payload);
 
     auto type = scanner->next();
     if (type == types::COMA) {
       variables(type_);
     } else if (type != types::SEMI) {
-      printErr("Ожидалось ;");
+      printErr("Expected ;");
     }
     break;
   }
@@ -170,18 +236,26 @@ void Parser::variables(int type_)
     variables(type_);
     break;
   default:
-    this->printErr("Недопустимая лексема");
+    this->printErr("Invalid token");
   }
 }
 
-void Parser::codeBlock()
+
+void Parser::codeBlock(std::shared_ptr<treeNode> node_, std::vector<data_variant> args_)
 {
   LOG("codeBlock");
 
   if (scanner->next() != types::fLBKT)
-    printErr("Ожидалось {");
+    printErr("Expected {");
 
   this->m_Analyzer->addScope();
+
+  if (node_ != nullptr) {
+    if (this->FlagInterp)
+      this->m_Analyzer->setCurr(node_->propogateArgs(this->m_Analyzer->getCurr(), args_));
+    else
+      this->m_Analyzer->setCurr(node_->propogateArgs(this->m_Analyzer->getCurr()));
+  }
 
   int pos, col, row;
   scanner->getUk(pos, row, col);
@@ -191,10 +265,10 @@ void Parser::codeBlock()
     if (type == types::INT || type == types::BOOL) {
       variables(type);
     } else if (type == types::IF) {
-      if (scanner->next() != types::LBKT) printErr("Ожидалось (");
+      if (scanner->next() != types::LBKT) printErr("Expected (");
       auto exp_dat = expression();
-      if (exp_dat.type != types::BOOL) this->m_Analyzer->printErr("Не удается привести к булевому типу");
-      if (scanner->next() != types::RBKT) printErr("Ожидалось )");
+      if (exp_dat.type != types::BOOL) this->m_Analyzer->printErr("Cant assign to bool");
+      if (scanner->next() != types::RBKT) printErr("Expected )");
 
       auto locFI = this->FlagInterp && std::get<bool>(exp_dat.payload);
       auto tmp = this->FlagInterp;
@@ -208,12 +282,12 @@ void Parser::codeBlock()
       auto typeOp = scanner->next();
       if (typeOp == types::sLBKT) {
         auto first_expr = expression();
-        if (first_expr.type != types::INT) this->m_Analyzer->printErr("Неверный тип выражения");
-        if (scanner->next() != types::sRBKT) printErr("Ожидалось ]");
-        if (scanner->next() != types::sLBKT) printErr("Ожидалось [");
+        if (first_expr.type != types::INT) this->m_Analyzer->printErr("Invalid expression type");
+        if (scanner->next() != types::sRBKT) printErr("Expected ]");
+        if (scanner->next() != types::sLBKT) printErr("Expected [");
         auto second_expr = expression();
-        if (second_expr.type != types::INT) this->m_Analyzer->printErr("Неверный тип выражения");
-        if (scanner->next() != types::sRBKT) printErr("Ожидалось ]");
+        if (second_expr.type != types::INT) this->m_Analyzer->printErr("Invalid expression type");
+        if (scanner->next() != types::sRBKT) printErr("Expected ]");
         auto arrType = this->m_Analyzer->getTypeOf(cachedId, IdType::tArr);
         typeOp = scanner->next();
 
@@ -227,10 +301,10 @@ void Parser::codeBlock()
               std::get<int>(second_expr.payload),
               exp_dat.payload);
           } else {
-            if (exp_dat.type != this->m_Analyzer->getTypeOf(cachedId, IdType::tVar)) this->m_Analyzer->printErr("Не совпадает тип переменной и выражения");
+            if (exp_dat.type != this->m_Analyzer->getTypeOf(cachedId, IdType::tVar)) this->m_Analyzer->printErr("Variable is not subtype of expression result");
           }
 
-          if (scanner->next() != types::SEMI) printErr("Ожидалось ;");
+          if (scanner->next() != types::SEMI) printErr("Expected ;");
           break;
         }
         case types::SUMEQ:
@@ -238,7 +312,7 @@ void Parser::codeBlock()
         case types::DIVEQ:
         case types::MULEQ: {
           auto exp_dat = expression();
-          if (exp_dat.type != types::INT) this->m_Analyzer->printErr("Недопустимый тип выражения");
+          if (exp_dat.type != types::INT) this->m_Analyzer->printErr("Invalid expression type");
 
           if (this->FlagInterp) {
             int curVal = std::get<int>(this->m_Analyzer->getArrVal(cachedId,
@@ -255,7 +329,7 @@ void Parser::codeBlock()
               curVal);
           }
 
-          if (scanner->next() != types::SEMI) printErr("Ожидалось ;");
+          if (scanner->next() != types::SEMI) printErr("Expected ;");
           break;
         }
         case types::INC:
@@ -274,34 +348,36 @@ void Parser::codeBlock()
               std::get<int>(second_expr.payload),
               value - 1);
           } else {
-            if (this->m_Analyzer->getTypeOf(cachedId, IdType::tVar) != types::INT) this->m_Analyzer->printErr("Недопустимый тип выражения");
+            if (this->m_Analyzer->getTypeOf(cachedId, IdType::tVar) != types::INT) this->m_Analyzer->printErr("Invalid expression type");
           }
 
-          if (scanner->next() != types::SEMI) printErr("Ожидалось ;");
+          if (scanner->next() != types::SEMI) printErr("Expected ;");
           break;
         }
         default:
-          printErr("Ожидалось присваивание");
+          printErr("Expected assignment");
           break;
         }
 
       } else {
         switch (typeOp) {
-        case types::LBKT:
-          if (scanner->next() != types::RBKT) printErr("Ожидалось )");
-          callFunc(cachedId);
-          if (scanner->next() != types::SEMI) printErr("Ожидалось ;");
+        case types::LBKT: {
+          auto args = arguments();
+          if (scanner->next() != types::RBKT) printErr("Expected )");
+          callFunc(cachedId, args);
+          if (scanner->next() != types::SEMI) printErr("Expected ;");
           break;
+        }
         case types::ASSIGN: {
 
           auto exp_dat = expression();
           if (FlagInterp) {
             this->m_Analyzer->setVarVal(cachedId, exp_dat.payload);
           } else {
-            if (exp_dat.type != this->m_Analyzer->getTypeOf(cachedId, IdType::tVar)) this->m_Analyzer->printErr("Не совпадает тип переменной и выражения");
+            if (exp_dat.type != this->m_Analyzer->getTypeOf(cachedId, IdType::tVar)) this->m_Analyzer->printErr("Variable is not subtype of expression result");
           }
 
-          if (scanner->next() != types::SEMI) printErr("Ожидалось ;");
+          if (scanner->next() != types::SEMI) printErr("Expected ;");
           break;
         }
         case types::SUMEQ:
@@ -309,7 +385,7 @@ void Parser::codeBlock()
         case types::DIVEQ:
         case types::MULEQ: {
           auto exp_dat = expression();
-          if (exp_dat.type != types::INT) this->m_Analyzer->printErr("Недопустимый тип выражения");
+          if (exp_dat.type != types::INT) this->m_Analyzer->printErr("Invalid expression type");
 
           if (this->FlagInterp) {
             int curVal = std::get<int>(this->m_Analyzer->getVarVal(cachedId));
@@ -321,7 +397,7 @@ void Parser::codeBlock()
             this->m_Analyzer->setVarVal(cachedId, curVal);
           }
 
-          if (scanner->next() != types::SEMI) printErr("Ожидалось ;");
+          if (scanner->next() != types::SEMI) printErr("Expected ;");
           break;
         }
         case types::INC:
@@ -332,14 +408,14 @@ void Parser::codeBlock()
             if (typeOp == types::INC) this->m_Analyzer->setVarVal(cachedId, value + 1);
             if (typeOp == types::DEC) this->m_Analyzer->setVarVal(cachedId, value - 1);
           } else {
-            if (this->m_Analyzer->getTypeOf(cachedId, IdType::tVar) != types::INT) this->m_Analyzer->printErr("Недопустимый тип выражения");
+            if (this->m_Analyzer->getTypeOf(cachedId, IdType::tVar) != types::INT) this->m_Analyzer->printErr("Invalid expression type");
           }
 
-          if (scanner->next() != types::SEMI) printErr("Ожидалось ;");
+          if (scanner->next() != types::SEMI) printErr("Expected ;");
           break;
         }
         default:
-          printErr("Ожидался вызов функции или присваивание");
+          printErr("Call or assignment was expected");
           break;
         }
       }
@@ -348,10 +424,10 @@ void Parser::codeBlock()
       codeBlock();
     } else if (type == types::RETURN) {
       auto exp_dat = expression();
-      if (exp_dat.type != this->m_Analyzer->getTypeOfFunc()) this->m_Analyzer->printErr("Тип выражения не совпадает с типом функции");
+      if (exp_dat.type != this->m_Analyzer->getTypeOfFunc()) this->m_Analyzer->printErr("Expression type is not subtype of fuction result");
       if (FlagInterp) this->m_Analyzer->setFuncRet(exp_dat.payload);
 
-      if (scanner->next() != types::SEMI) printErr("Ожидалось ;");
+      if (scanner->next() != types::SEMI) printErr("Expected ;");
 
       if (this->FlagInterp) return;
     }
@@ -361,7 +437,7 @@ void Parser::codeBlock()
   }
   scanner->setUk(pos, row, col);
 
-  if (scanner->next() != types::fRBKT) printErr("Ожидалось }");
+  if (scanner->next() != types::fRBKT) printErr("Expected }");
   this->m_Analyzer->exitScope();
 }
 
@@ -384,7 +460,7 @@ Data Parser::expression()
   case types::EQ: {
 
     auto right_el = expression();
-    if (left_el.type != right_el.type) this->m_Analyzer->printErr("Разные типы выражений");
+    if (left_el.type != right_el.type) this->m_Analyzer->printErr("Expression have different type");
     resType = BOOL;
 
     if (FlagInterp) {
@@ -433,7 +509,7 @@ Data Parser::element()
     auto el = element();
     resType = el.type;
     resVal = el.payload;
-    if (scanner->next() != types::RBKT) printErr("Ожидалось )");
+    if (scanner->next() != types::RBKT) printErr("Expected )");
     goto checkOpperation;
   } else {
     scanner->setUk(pos, row, col);
@@ -448,18 +524,19 @@ Data Parser::element()
     auto type = scanner->next();
     if (type == types::sLBKT) {
       auto first_expr = expression();
-      if (first_expr.type != types::INT) this->m_Analyzer->printErr("Неверный тип выражения");
-      if (scanner->next() != types::sRBKT) printErr("Ожидалось ]");
-      if (scanner->next() != types::sLBKT) printErr("Ожидалось [");
+      if (first_expr.type != types::INT) this->m_Analyzer->printErr("Invalid expression type");
+      if (scanner->next() != types::sRBKT) printErr("Expected ]");
+      if (scanner->next() != types::sLBKT) printErr("Expected [");
       auto second_expr = expression();
-      if (second_expr.type != types::INT) this->m_Analyzer->printErr("Неверный тип выражения");
-      if (scanner->next() != types::sRBKT) printErr("Ожидалось ]");
+      if (second_expr.type != types::INT) this->m_Analyzer->printErr("Invalid expression type");
+      if (scanner->next() != types::sRBKT) printErr("Expected ]");
       resType = this->m_Analyzer->getTypeOf(cached_id, IdType::tArr);
       resVal = this->m_Analyzer->getArrVal(cached_id, std::get<int>(first_expr.payload), std::get<int>(second_expr.payload));
     } else if (type == types::LBKT) {
-      if (scanner->next() != types::RBKT) printErr("Ожидалось )");
+      auto args = arguments();
+      if (scanner->next() != types::RBKT) printErr("Expected )");
       resType = this->m_Analyzer->getTypeOf(cached_id, IdType::tFunc);
-      resVal = callFunc(cached_id);
+      resVal = callFunc(cached_id, args);
     } else {
       resType = this->m_Analyzer->getTypeOf(cached_id, IdType::tVar);
       resVal = this->m_Analyzer->getVarVal(cached_id);
@@ -478,7 +555,7 @@ Data Parser::element()
     resVal = std::stoi(this->scanner->getToken().data());
     break;
   default:
-    printErr("Ожидался элемент");
+    printErr("РћР¶РёРґР°Р»СЃСЏ СЌР»РµРјРµРЅС‚");
   }
 
 checkOpperation:
@@ -487,7 +564,7 @@ checkOpperation:
   if (type == types::SUM || type == types::SUB || type == types::MUL || type == types::DIV || type == types::MULEQ || type == types::SUBEQ || type == types::SUMEQ || type == types::DIVEQ) {
     auto right_el = element();
     auto left_el = Data(resType, resVal);
-    if (resType != types::INT || right_el.type != types::INT) this->m_Analyzer->printErr("Недопустимые типы элементов (допустимы только целочисленные)");
+    if (resType != types::INT || right_el.type != types::INT) this->m_Analyzer->printErr("Invalid element type (only integer allowed)");
 
 
     if (this->FlagInterp) {
@@ -536,7 +613,7 @@ checkOpperation:
       if (this->FlagInterp) this->m_Analyzer->setVarVal(left_name, resValInt);
       resVal = data_variant(resValInt);
     } else {
-      this->m_Analyzer->printErr("Операция применима только к переменным");
+      this->m_Analyzer->printErr("Operation can be applied only to variables");
     }
 
   } else {

@@ -1,6 +1,9 @@
 #pragma once
 
 #include <string>
+#include <map>
+#include <vector>
+#include <variant>
 
 //#define DEBUG
 
@@ -12,10 +15,7 @@
 
 #define data_variant std::variant<bool, int, int **>
 
-static std::string resolve_func(int t_, std::string_view n_)
-{
-  return std::to_string(t_).append(n_);
-}
+
 
 enum types
 {
@@ -67,3 +67,35 @@ enum types
 
 
 };
+
+static std::string resolve_func(int t_, std::string_view n_, std::map<std::string, int> args_ = {})
+{
+	std::string args = "";
+	if (!args_.empty()) {
+		for (const auto &[key, val] : args_) {
+			args.append("_").append(std::to_string(val));
+		}
+	}
+
+	return std::to_string(t_).append(n_).append(args);
+}
+
+static std::string resolve_func(int t_, std::string_view n_, std::vector<data_variant> args_)
+{
+	std::string args = "";
+
+	if (!args_.empty()) {
+		for (const auto &val : args_) {
+			switch (val.index()) {
+			case 0:
+				args.append("_").append( std::to_string(types::BOOL));
+				break;
+			case 1:
+				args.append("_").append( std::to_string(types::INT));
+				break;
+			}
+		}
+	}
+
+	return std::to_string(t_).append(n_).append(args);
+}
