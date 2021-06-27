@@ -548,7 +548,7 @@ Data Parser::element()
   }
   case types::BOOL_CONST:
     resType = BOOL;
-    resVal = this->scanner->getToken().data() == "true" ? true : false;
+    resVal = strcmp(this->scanner->getToken().data(), "true") == 1 ? true : false;
     break;
   case types::INT_CONST:
     resType = INT;
