@@ -11,7 +11,7 @@ void Analyzer::printErr(const char *err)
   this->m_Scanner->getUk(pos, row, coll);
   std::cout << "[Analyzer] " << this->m_Scanner->getFilename() << ":" << row + 1 << ":" << coll << " Error " << err << '\n';
 
-  throw "";
+  //throw "";
   //return types::ERROR;
 }
 
@@ -37,7 +37,7 @@ Analyzer::Analyzer(Scanner *scanner_) : m_Scanner{ scanner_ }
 
 void Analyzer::addFunction(types retType_, const std::string_view &id_, Uk uk, std::map<std::string, int> args_)
 {
-  if (this->m_Curr->search(id_) != nullptr) this->printErr("Object with same name already defined");
+  if (this->m_Curr->search(id_) != nullptr) this->printErr("Object with same signature already defined");
   this->m_Curr = this->m_Curr->addFunc(id_, getType(retType_), uk, args_);
 }
 
@@ -80,14 +80,14 @@ void Analyzer::exitScope()
   if (this->m_Curr == nullptr) this->printErr("Cant get out of scope");
 }
 
-int Analyzer::getTypeOf(const std::string_view &id_, IdType idtype_)
+int Analyzer::getTypeOf(const std::string_view &id_, IdType idtype_, std::vector<data_variant> args_)
 {
   treeNode *res;
 
   if (idtype_ == IdType::tFunc) {
-    auto m1 = this->m_Curr->search(resolve_func(types::INT, id_));
-    auto m2 = this->m_Curr->search(resolve_func(types::BOOL, id_));
-    auto m3 = this->m_Curr->search(resolve_func(types::VOID, id_));
+    auto m1 = this->m_Curr->search(resolve_func(types::INT, id_, args_));
+    auto m2 = this->m_Curr->search(resolve_func(types::BOOL, id_, args_));
+    auto m3 = this->m_Curr->search(resolve_func(types::VOID, id_, args_));
 
     res = m1 ? m1 : m2 ? m2 : m3;
   } else {

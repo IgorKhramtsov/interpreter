@@ -535,7 +535,7 @@ Data Parser::element()
     } else if (type == types::LBKT) {
       auto args = arguments();
       if (scanner->next() != types::RBKT) printErr("Expected )");
-      resType = this->m_Analyzer->getTypeOf(cached_id, IdType::tFunc);
+      resType = this->m_Analyzer->getTypeOf(cached_id, IdType::tFunc, args);
       resVal = callFunc(cached_id, args);
     } else {
       resType = this->m_Analyzer->getTypeOf(cached_id, IdType::tVar);
@@ -555,7 +555,7 @@ Data Parser::element()
     resVal = std::stoi(this->scanner->getToken().data());
     break;
   default:
-    printErr("Ожидался элемент");
+    printErr("Element expected");
   }
 
 checkOpperation:

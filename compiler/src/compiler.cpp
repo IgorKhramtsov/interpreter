@@ -15,7 +15,7 @@
 
 void loadAndScan(std::string &filename);
 
-#define disable_catch 0
+#define disable_catch 1
 
 auto main(int argc, char *argv[]) -> int
 {
@@ -78,8 +78,8 @@ void loadAndScan(std::string &filename)
 #else
   try {
     parser.s();
-    parser.startInterp();
     parser.show();
+    parser.startInterp();
   } catch (...) {
     std::cout << "Exception has been thrown.\n";
     return;
