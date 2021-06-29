@@ -71,19 +71,19 @@ void loadAndScan(std::string &filename)
   Scanner scanner(buffer, length + 1, filename);// Syntax scanner
   Parser parser(&scanner);// Syntax parser
 
-#if disable_catch
-  parser.s();
-  parser.startInterp();
-  parser.show();
-#else
   try {
     parser.s();
     parser.show();
     parser.startInterp();
+#if disable_catch
   } catch (...) {
-    std::cout << "Exception has been thrown.\n";
+    throw;
+#else
+  } catch (const char* exc) {
+    std::cout << exc;
     return;
-  }
 #endif
+  }
+
   std::cout << "Everything nice ;)\n";
 }

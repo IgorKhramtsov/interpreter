@@ -8,13 +8,13 @@ void treeNode::print(int level)
   if (this == nullptr) return;
 
   for (int i = 0; i < level; i++)
-    std::cout << " -- ";
+    std::cout << " > ";
   switch (this->m_IdType) {
   case IdType::none:
-    //std::cout << std::setw(13) << "Пустой узел ";
+    std::cout << std::setw(13) << "Empty node";
     break;
   case IdType::tFunc:
-    std::cout << std::setw(13) << "Function " << this->m_Id << '\n';
+    std::cout << std::setw(13) << "Function " << this->m_Id;
     break;
   case IdType::tVar:
     std::string val = "";
@@ -30,11 +30,11 @@ void treeNode::print(int level)
       else
         val = "not initialized";
     }
-    std::cout << std::setw(13) << "Variable " << this->m_Id << " = " << val.c_str() << '\n';
+    std::cout << std::setw(13) << "Variable " << this->m_Id << " = " << val.c_str();
     break;
   }
 
-  //std::cout << '\n';
+  std::cout << '\n';
   this->m_RigthNode->print(level + 1);
   this->m_LeftNode->print(level);
 }
@@ -111,14 +111,24 @@ const std::shared_ptr<treeNode> treeNode::propogateArgs(const std::shared_ptr<tr
   return returned;
 }
 
+/// Hack for multiple scopes
+std::shared_ptr<treeNode> treeNode::addEmpty()
+{
+  if (this->m_LeftNode != nullptr) {
+    throw "Cant add treeNode to the left. leftNode already exist";
+  }
+  this->m_LeftNode = std::make_shared<treeNode>(this);
+
+  return this->m_LeftNode;
+}
+
 std::shared_ptr<treeNode> treeNode::addScope()
 {
   if (this->m_RigthNode != nullptr) {
-    throw "Cant add treeNode to right. rightNode already exist";
+    //throw "Cant add treeNode to right. rightNode already exist";
+    return this->addEmpty()->addScope();
   }
-
   this->m_RigthNode = std::make_shared<treeNode>(this);
-
 
   return this->m_RigthNode;
 }
@@ -126,7 +136,8 @@ std::shared_ptr<treeNode> treeNode::addScope()
 std::shared_ptr<treeNode> treeNode::exitScope()
 {
   auto par = this->m_Parent;
-  while (par->m_RigthNode == nullptr) {
+  /// Go up while no right node, or empty node (this is hack for multiple scopes)
+  while (par->m_RigthNode == nullptr || par->m_IdType == IdType::none) {
     par = par->m_Parent;
   }
   return par;

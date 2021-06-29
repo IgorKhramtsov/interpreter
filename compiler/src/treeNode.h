@@ -46,6 +46,7 @@ public:
   std::shared_ptr<treeNode> addArr(const std::string_view &, DataType, int = 0, int = 0);
   std::shared_ptr<treeNode> addId(const std::string_view &, DataType, data_variant);
   std::shared_ptr<treeNode> addFunc(const std::string_view &, DataType, Uk, std::map<std::string, int>);
+  std::shared_ptr<treeNode> addEmpty();
   std::shared_ptr<treeNode> addScope();
   std::shared_ptr<treeNode> exitScope();
   std::shared_ptr<treeNode> getParent();
