@@ -1,4 +1,3 @@
-// compiler.cpp (main)
 #include <cstdlib>
 #include <string>
 #include <iostream>
@@ -29,11 +28,6 @@ auto main(int argc, char *argv[]) -> int
   }
 
   int key;
-  //do {
-  //loadAndScan(filename);
-  //key = std::cin.get();
-  //std::cout << key;
-  //} while (key == 10 || key == 13);
   loadAndScan(filename);
   FileWatcher watcher(filename, 350);
   watcher.start([&filename]() -> void { 

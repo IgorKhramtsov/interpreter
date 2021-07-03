@@ -24,6 +24,7 @@
     <ProjectGuid>{3e6abcd1-772b-446a-b859-ea6aa248b86b}</ProjectGuid>
     <RootNamespace>compiler</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>interpreter</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -160,7 +161,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\analyzer.cpp" />
-    <ClCompile Include="src\compiler.cpp" />
+    <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\parser.cpp" />
     <ClCompile Include="src\scanner.cpp" />
     <ClCompile Include="src\treeNode.cpp" />
