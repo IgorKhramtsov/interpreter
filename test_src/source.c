@@ -1,18 +1,4 @@
-bool first, isTrue = true, jefry;
-
-int functionReturnC()
-{
-	int a = 100, c = 10;
-	if (a > c) {
-		c = 0;
-	}
-	return c;
-}
-
-int functionRetSecondArg(bool a, int cd)
-{
-	return cd;
-}
+bool first, isTrue = true, jefry = false;
 
 int functionReturnMax(int first, int second) {
 	if (first > second) {
