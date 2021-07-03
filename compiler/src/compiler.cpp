@@ -15,7 +15,7 @@
 
 void loadAndScan(std::string &filename);
 
-#define disable_catch 1
+#define disable_catch 0
 
 auto main(int argc, char *argv[]) -> int
 {
